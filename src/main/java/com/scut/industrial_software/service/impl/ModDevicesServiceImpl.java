@@ -1,6 +1,6 @@
 package com.scut.industrial_software.service.impl;
 
-import com.scut.industrial_software.entity.ModDevices;
+import com.scut.industrial_software.model.entity.ModDevices;
 import com.scut.industrial_software.mapper.ModDevicesMapper;
 import com.scut.industrial_software.service.IModDevicesService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;

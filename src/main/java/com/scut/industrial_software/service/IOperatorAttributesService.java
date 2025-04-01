@@ -1,6 +1,6 @@
 package com.scut.industrial_software.service;
 
-import com.scut.industrial_software.entity.OperatorAttributes;
+import com.scut.industrial_software.model.entity.OperatorAttributes;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**

@@ -1,8 +1,7 @@
 package com.scut.industrial_software.mapper;
 
-import com.scut.industrial_software.entity.ModUsers;
+import com.scut.industrial_software.model.entity.ModUsers;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import org.apache.ibatis.annotations.Mapper;
 
 /**
  * <p>

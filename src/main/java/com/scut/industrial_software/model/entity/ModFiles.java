@@ -1,4 +1,4 @@
-package com.scut.industrial_software.entity;
+package com.scut.industrial_software.model.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -18,21 +18,25 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@TableName("mod_tasks")
-public class ModTasks implements Serializable {
+@TableName("mod_files")
+public class ModFiles implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @TableId(value = "task_id", type = IdType.AUTO)
-    private Integer taskId;
+    @TableId(value = "file_id", type = IdType.AUTO)
+    private Integer fileId;
 
-    private String taskName;
+    private String fileName;
 
-    private String taskStage;
+    private String fileCategory;
 
-    private Integer creator;
+    private String stage;
+
+    private String fileAddress;
 
     private LocalDateTime creationTime;
+
+    private LocalDateTime modificationTime;
 
     private Integer projectId;
 

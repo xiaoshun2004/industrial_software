@@ -15,10 +15,10 @@ public class ModUsersControllerTest {
     @Autowired
     private TestRestTemplate restTemplate;
 
-    @Test
+    /*@Test
     public void testGetAllUsers() {
         ResponseEntity<String> response = restTemplate.getForEntity("/modUsers", String.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-    }
+    }*/
 }

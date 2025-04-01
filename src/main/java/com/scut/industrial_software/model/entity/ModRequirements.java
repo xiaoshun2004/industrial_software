@@ -1,4 +1,4 @@
-package com.scut.industrial_software.entity;
+package com.scut.industrial_software.model.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -17,19 +17,19 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@TableName("mod_users")
-public class ModUsers implements Serializable {
+@TableName("mod_requirements")
+public class ModRequirements implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @TableId(value = "user_id", type = IdType.AUTO)
-    private Integer userId;
+    @TableId(value = "requirement_id", type = IdType.AUTO)
+    private Integer requirementId;
 
-    private String username;
+    private String requirementType;
 
-    private String password;
+    private String requirementParameters;
 
-    private Integer permission;
+    private Integer taskId;
 
 
 }

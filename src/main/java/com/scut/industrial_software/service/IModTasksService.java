@@ -1,6 +1,6 @@
 package com.scut.industrial_software.service;
 
-import com.scut.industrial_software.entity.ModTasks;
+import com.scut.industrial_software.model.entity.ModTasks;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**

@@ -1,7 +1,5 @@
-package com.scut.industrial_software.entity;
+package com.scut.industrial_software.model.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -10,7 +8,7 @@ import lombok.Setter;
 
 /**
  * <p>
- * 
+ * VIEW
  * </p>
  *
  * @author zhou
@@ -18,12 +16,11 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@TableName("mod_projects")
-public class ModProjects implements Serializable {
+@TableName("project_details_view")
+public class ProjectDetailsView implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @TableId(value = "project_id", type = IdType.AUTO)
     private Integer projectId;
 
     private String projectName;

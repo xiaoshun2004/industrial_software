@@ -1,6 +1,6 @@
 package com.scut.industrial_software.mapper;
 
-import com.scut.industrial_software.entity.ProjectDetailsView;
+import com.scut.industrial_software.model.entity.ProjectDetailsView;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**

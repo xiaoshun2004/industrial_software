@@ -1,6 +1,6 @@
 package com.scut.industrial_software.service.impl;
 
-import com.scut.industrial_software.entity.ProjectListView;
+import com.scut.industrial_software.model.entity.ProjectListView;
 import com.scut.industrial_software.mapper.ProjectListViewMapper;
 import com.scut.industrial_software.service.IProjectListViewService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;

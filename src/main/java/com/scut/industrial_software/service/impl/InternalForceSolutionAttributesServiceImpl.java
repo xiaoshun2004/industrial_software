@@ -1,6 +1,6 @@
 package com.scut.industrial_software.service.impl;
 
-import com.scut.industrial_software.entity.InternalForceSolutionAttributes;
+import com.scut.industrial_software.model.entity.InternalForceSolutionAttributes;
 import com.scut.industrial_software.mapper.InternalForceSolutionAttributesMapper;
 import com.scut.industrial_software.service.IInternalForceSolutionAttributesService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;

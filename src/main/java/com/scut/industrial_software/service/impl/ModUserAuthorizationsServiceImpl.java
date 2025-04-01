@@ -1,6 +1,6 @@
 package com.scut.industrial_software.service.impl;
 
-import com.scut.industrial_software.entity.ModUserAuthorizations;
+import com.scut.industrial_software.model.entity.ModUserAuthorizations;
 import com.scut.industrial_software.mapper.ModUserAuthorizationsMapper;
 import com.scut.industrial_software.service.IModUserAuthorizationsService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;

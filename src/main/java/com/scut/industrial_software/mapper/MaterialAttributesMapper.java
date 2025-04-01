@@ -1,6 +1,6 @@
 package com.scut.industrial_software.mapper;
 
-import com.scut.industrial_software.entity.MaterialAttributes;
+import com.scut.industrial_software.model.entity.MaterialAttributes;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**

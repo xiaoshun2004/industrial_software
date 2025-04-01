@@ -1,4 +1,4 @@
-package com.scut.industrial_software.entity;
+package com.scut.industrial_software.model.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -17,19 +17,19 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@TableName("mod_base_attributes")
-public class ModBaseAttributes implements Serializable {
+@TableName("mod_devices")
+public class ModDevices implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    @TableId(value = "base_id", type = IdType.AUTO)
+    @TableId(value = "device_id", type = IdType.AUTO)
+    private Integer deviceId;
+
+    private String deviceType;
+
     private Integer baseId;
 
-    private String deviceName;
-
-    private String deviceDescription;
-
-    private Integer creator;
+    private Integer taskId;
 
 
 }

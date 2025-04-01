@@ -1,6 +1,6 @@
 package com.scut.industrial_software.service.impl;
 
-import com.scut.industrial_software.entity.MaterialAttributes;
+import com.scut.industrial_software.model.entity.MaterialAttributes;
 import com.scut.industrial_software.mapper.MaterialAttributesMapper;
 import com.scut.industrial_software.service.IMaterialAttributesService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;

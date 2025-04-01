@@ -1,6 +1,6 @@
 package com.scut.industrial_software.service.impl;
 
-import com.scut.industrial_software.entity.DeviceTaskView;
+import com.scut.industrial_software.model.entity.DeviceTaskView;
 import com.scut.industrial_software.mapper.DeviceTaskViewMapper;
 import com.scut.industrial_software.service.IDeviceTaskViewService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;

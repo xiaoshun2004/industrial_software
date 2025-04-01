@@ -1,6 +1,6 @@
 package com.scut.industrial_software.service.impl;
 
-import com.scut.industrial_software.entity.LoadSpectrumAttributes;
+import com.scut.industrial_software.model.entity.LoadSpectrumAttributes;
 import com.scut.industrial_software.mapper.LoadSpectrumAttributesMapper;
 import com.scut.industrial_software.service.ILoadSpectrumAttributesService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;

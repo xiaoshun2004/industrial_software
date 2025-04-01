@@ -1,4 +1,4 @@
-package com.scut.industrial_software.entity;
+package com.scut.industrial_software.model.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
@@ -15,16 +15,16 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@TableName("project_list_view")
-public class ProjectListView implements Serializable {
+@TableName("task_project_view")
+public class TaskProjectView implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private Integer projectId;
+    private Integer taskId;
 
-    private String projectName;
+    private String taskName;
 
-    private String projectStage;
+    private String taskStage;
 
 
 }

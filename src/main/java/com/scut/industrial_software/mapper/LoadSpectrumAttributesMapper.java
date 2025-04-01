@@ -1,6 +1,6 @@
 package com.scut.industrial_software.mapper;
 
-import com.scut.industrial_software.entity.LoadSpectrumAttributes;
+import com.scut.industrial_software.model.entity.LoadSpectrumAttributes;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 
 /**

@@ -1,4 +1,4 @@
-package com.scut.industrial_software.entity;
+package com.scut.industrial_software.model.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
@@ -15,14 +15,18 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@TableName("user_permissions_view")
-public class UserPermissionsView implements Serializable {
+@TableName("device_task_view")
+public class DeviceTaskView implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private String username;
+    private Integer baseId;
 
-    private Integer permission;
+    private String deviceName;
+
+    private String deviceDescription;
+
+    private String taskName;
 
 
 }

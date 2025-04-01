@@ -1,8 +1,7 @@
-package com.scut.industrial_software.entity;
+package com.scut.industrial_software.model.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
-import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,8 +15,8 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@TableName("project_details_view")
-public class ProjectDetailsView implements Serializable {
+@TableName("project_list_view")
+public class ProjectListView implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -26,10 +25,6 @@ public class ProjectDetailsView implements Serializable {
     private String projectName;
 
     private String projectStage;
-
-    private Integer creator;
-
-    private LocalDateTime creationTime;
 
 
 }

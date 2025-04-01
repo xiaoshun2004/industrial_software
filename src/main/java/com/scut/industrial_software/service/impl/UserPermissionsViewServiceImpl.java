@@ -1,6 +1,6 @@
 package com.scut.industrial_software.service.impl;
 
-import com.scut.industrial_software.entity.UserPermissionsView;
+import com.scut.industrial_software.model.entity.UserPermissionsView;
 import com.scut.industrial_software.mapper.UserPermissionsViewMapper;
 import com.scut.industrial_software.service.IUserPermissionsViewService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
