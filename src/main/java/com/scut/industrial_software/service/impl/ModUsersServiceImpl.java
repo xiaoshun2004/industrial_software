@@ -9,6 +9,7 @@ import com.scut.industrial_software.model.entity.ModUsers;
 import com.scut.industrial_software.mapper.ModUsersMapper;
 import com.scut.industrial_software.service.IModUsersService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.scut.industrial_software.utils.PasswordUtil;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 
@@ -48,9 +49,10 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
         if(!ObjectUtils.isEmpty(user)){
             ApiAsserts.fail("用户名已经存在！");//该方法返回null并且抛出异常
         }
+        String encodedPassword = PasswordUtil.encodePassword(dto.getPassword());
         ModUsers addUsers = ModUsers.builder()
                 .username(dto.getUsername())
-                .password(dto.getPassword())
+                .password(encodedPassword)
                 .permission(dto.getPermission())
                 .build();
         baseMapper.insert(addUsers);
