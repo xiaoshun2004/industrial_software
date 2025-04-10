@@ -3,6 +3,7 @@ package com.scut.industrial_software.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.scut.industrial_software.common.exception.ApiAsserts;
+import com.scut.industrial_software.model.dto.UserLoginDTO;
 import com.scut.industrial_software.model.dto.UserRegisterDTO;
 import com.scut.industrial_software.model.entity.ModUsers;
 import com.scut.industrial_software.mapper.ModUsersMapper;
@@ -54,6 +55,22 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
                 .build();
         baseMapper.insert(addUsers);
         return addUsers;
+    }
+
+    @Override
+    public ModUsers login(UserLoginDTO userLoginDTO) {
+        // 1. 根据用户名查询用户（假设用户名唯一）
+        LambdaQueryWrapper<ModUsers> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(ModUsers::getUsername, userLoginDTO.getUsername());
+        ModUsers user = this.getOne(queryWrapper);
+
+        // 2. 用户不存在或密码不匹配返回 null
+        if (user == null || !user.getPassword().equals(userLoginDTO.getPassword())) {
+            return null;
+        }
+
+        return user;
+
     }
 
 

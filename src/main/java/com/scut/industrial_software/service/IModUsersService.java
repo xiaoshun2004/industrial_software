@@ -1,5 +1,6 @@
 package com.scut.industrial_software.service;
 
+import com.scut.industrial_software.model.dto.UserLoginDTO;
 import com.scut.industrial_software.model.dto.UserRegisterDTO;
 import com.scut.industrial_software.model.entity.ModUsers;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -30,4 +31,6 @@ public interface IModUsersService extends IService<ModUsers> {
      * @return
      */
     ModUsers executeRegister(UserRegisterDTO userRegisterDTO);
+
+    ModUsers login(UserLoginDTO userLoginDTO);
 }
