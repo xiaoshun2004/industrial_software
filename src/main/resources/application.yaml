@@ -37,3 +37,10 @@ mybatis-plus:
     map-underscore-to-camel-case: true
     # 打印 SQL 日志，可辅助调试
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+ali:
+  oss:
+    endpoint: oss-cn-guangzhou.aliyuncs.com
+    bucket-name: your-bucket-name
+    access-key-id: YOUR_ACCESS_KEY_ID
+    access-key-secret: YOUR_ACCESS_KEY_SECRET
