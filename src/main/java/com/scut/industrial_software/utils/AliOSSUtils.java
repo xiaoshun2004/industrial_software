@@ -3,6 +3,8 @@ package com.scut.industrial_software.utils;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
+import com.scut.industrial_software.common.config.AliOssProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -16,16 +18,24 @@ import java.util.UUID;
  */
 @Component
 public class AliOSSUtils {
+    private final AliOssProperties aliOssProperties;
+    @Autowired
+    public AliOSSUtils(AliOssProperties aliOssProperties) {
+        this.aliOssProperties = aliOssProperties;
+    }
 
-    private String endpoint =  "https://oss-cn-shenzhen.aliyuncs.com";
-    private String accessKeyId = "LTAI5tANDZdfbivKRZ6cQdVs";
-    private String accessKeySecret = "6gayeIkIqJaQSCP7mRuXb8mjSkVHv5";
-    private String bucketName = "industrial-software";
 
     /**
      * 实现上传图片到OSS
      */
     public String upload(MultipartFile file) throws IOException {
+
+        // 获取配置
+        String endpoint = aliOssProperties.getEndpoint();
+        String accessKeyId = aliOssProperties.getAccessKeyId();
+        String accessKeySecret = aliOssProperties.getAccessKeySecret();
+        String bucketName = aliOssProperties.getBucketName();
+
         // 获取上传的文件的输入流
         InputStream inputStream = file.getInputStream();
 
