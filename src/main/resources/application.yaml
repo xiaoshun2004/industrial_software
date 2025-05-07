@@ -1,0 +1,51 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: industrial_software_system
+
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/industrial_software_system?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+    hibernate:
+      ddl-auto: update  # 自动更新数据库表结构（生产环境建议改为 validate）
+    show-sql: true  # 控制台打印 SQL 语句
+    properties:
+      hibernate:
+        format_sql: true  # 格式化 SQL 输出
+
+# MyBatis-Plus 配置
+mybatis-plus:
+  # 配置 mapper xml 文件路径
+  mapper-locations: classpath:mapper/*.xml
+  # 实体扫描，多个package用逗号或者分号分隔
+  type-aliases-package: com.scut.industrial_software.entity
+  global-config:
+    db-config:
+      # 主键类型，若数据库表使用自增主键，可设置为 AUTO
+      id-type: auto
+      # 表名前缀
+      table-prefix: t_
+  configuration:
+    # 开启驼峰命名自动映射
+    map-underscore-to-camel-case: true
+    # 打印 SQL 日志，可辅助调试
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+ali:
+  oss:
+    endpoint: oss-cn-guangzhou.aliyuncs.com
+    bucket-name: your-bucket-name
+    access-key-id: YOUR_ACCESS_KEY_ID
+    access-key-secret: YOUR_ACCESS_KEY_SECRET
+
+
+files:
+  upload:
+    path: E:/data/files/

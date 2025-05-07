@@ -1,0 +1,44 @@
+package com.scut.industrial_software.model.entity;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import java.io.Serializable;
+import java.time.LocalDateTime;
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * <p>
+ * 
+ * </p>
+ *
+ * @author zhou
+ * @since 2025-03-29
+ */
+@Getter
+@Setter
+@TableName("mod_files")
+public class ModFiles implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    @TableId(value = "file_id", type = IdType.AUTO)
+    private Integer fileId;
+
+    private String fileName;
+
+    private String fileCategory;
+
+    private String stage;
+
+    private String fileAddress;
+
+    private LocalDateTime creationTime;
+
+    private LocalDateTime modificationTime;
+
+    private Integer projectId;
+
+
+}
