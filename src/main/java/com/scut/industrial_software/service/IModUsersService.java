@@ -43,4 +43,10 @@ public interface IModUsersService extends IService<ModUsers> {
      * @return
      */
     PageVO<UserInfoVO> pageUsers(UserPageQueryDTO queryDTO);
+
+    /**
+     * 查询当前用户信息 回显
+     * @return
+     */
+    UserInfoVO getCurrentUserInfo();
 }

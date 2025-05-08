@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.scut.industrial_software.common.exception.ApiAsserts;
+import com.scut.industrial_software.model.dto.UserDTO;
 import com.scut.industrial_software.model.dto.UserLoginDTO;
 import com.scut.industrial_software.model.dto.UserPageQueryDTO;
 import com.scut.industrial_software.model.dto.UserRegisterDTO;
@@ -14,6 +15,7 @@ import com.scut.industrial_software.model.vo.UserInfoVO;
 import com.scut.industrial_software.service.IModUsersService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.scut.industrial_software.utils.PasswordUtil;
+import com.scut.industrial_software.utils.UserHolder;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
@@ -122,5 +124,41 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
         );
     }
 
+    /**
+     * 查询当前用户信息 回显
+     * @return
+     */
+    public UserInfoVO getCurrentUserInfo() {
+        // 从ThreadLocal中获取当前用户ID
+        UserDTO currentUser = UserHolder.getUser();
+        if (currentUser == null || currentUser.getId() == null) {
+            return null;
+        }
+
+        // 根据用户ID查询用户完整信息
+        return getUserInfoById(currentUser.getId());
+    }
+
+    /**
+     * 根据用户ID查询用户信息
+     * @param userId 用户ID
+     * @return 用户信息VO
+     */
+    private UserInfoVO getUserInfoById(Long userId) {
+        // 查询用户信息，排除密码字段
+        ModUsers user = baseMapper.selectById(userId);
+        if (user == null) {
+            return null;
+        }
+
+        // 转换为VO对象
+        UserInfoVO userInfoVO = new UserInfoVO();
+        userInfoVO.setUserId(user.getUserId());
+        userInfoVO.setUsername(user.getUsername());
+        userInfoVO.setPermission(user.getPermission());
+        userInfoVO.setPhone(user.getPhone());  // 如果有电话号码字段
+
+        return userInfoVO;
+    }
 
 }

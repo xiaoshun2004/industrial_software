@@ -37,7 +37,4 @@ public class LoginController {
         String token = JwtUtils.generateToken(claims);
         return ApiResult.success(new LoginInfoDTO(user.getUsername(), token));
     }
-
-
-
 }

@@ -73,4 +73,20 @@ public class ModUsersController {
         PageVO<UserInfoVO> pageResult = iModUsersService.pageUsers(queryDTO);
         return ApiResult.success(pageResult);
     }
+
+    /**
+     * 查询当前用户信息 回显
+     * @return
+     */
+    @ResponseBody
+    @GetMapping("/info")
+    public ApiResult<UserInfoVO> getCurrentUserInfo() {
+        log.info("获取当前登录用户信息");
+        UserInfoVO userInfo = iModUsersService.getCurrentUserInfo();
+        if (userInfo == null) {
+            return ApiResult.failed("获取用户信息失败");
+        }
+        return ApiResult.success(userInfo);
+    }
+
 }
