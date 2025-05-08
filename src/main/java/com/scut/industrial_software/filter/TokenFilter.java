@@ -23,7 +23,19 @@ public class TokenFilter implements Filter {
         try {
             //1. 获取到请求路径
             String requestURI = request.getRequestURI(); // /employee/login
+
             log.info("当前请求 URI: {}", requestURI);
+            // 2. 检查 URI 是否以 /api 开头，如果是，去掉 /api 前缀
+            if (requestURI.startsWith("/api")) {
+                String newRequestURI = requestURI.substring(4); // 去掉 /api 部分
+                log.info("修改后的请求 URI: {}", newRequestURI);
+
+                // 创建一个新的请求，将 URI 替换为去掉 /api 后的 URI
+                RequestDispatcher dispatcher = request.getRequestDispatcher(newRequestURI);
+                dispatcher.forward(request, response);
+                return; // 请求已经被转发，不再继续执行下面的逻辑
+            }
+
 
             // 2.放行注册和登录请求
             if (requestURI.equals("/modUsers/register") || requestURI.equals("/auth/jsonLogin")) {
