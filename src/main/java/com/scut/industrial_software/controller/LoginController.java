@@ -33,6 +33,7 @@ public class LoginController {
         // 3. 生成 Token（需确保 JJWT 依赖已添加）
         Map<String,Object> claims = new HashMap<>();
         claims.put("id",user.getUserId());
+        claims.put("name",user.getUsername());
         String token = JwtUtils.generateToken(claims);
         return ApiResult.success(new LoginInfoDTO(user.getUsername(), token));
     }
