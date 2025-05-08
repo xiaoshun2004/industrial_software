@@ -34,5 +34,9 @@ public class ModUsers implements Serializable {
 
     private Integer permission;
 
+    /**
+     * 用户电话号码
+     */
+    private String phone;
 
 }

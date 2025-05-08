@@ -51,17 +51,21 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
     public ModUsers executeRegister(UserRegisterDTO dto) {
         //1.检查用户名是否存在
         LambdaQueryWrapper<ModUsers> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(ModUsers::getUsername,dto.getUsername());
+        wrapper.eq(ModUsers::getUsername, dto.getUsername());
         ModUsers user = baseMapper.selectOne(wrapper);
         if(!ObjectUtils.isEmpty(user)){
             ApiAsserts.fail("用户名已经存在！");//该方法返回null并且抛出异常
         }
+
         String encodedPassword = PasswordUtil.encodePassword(dto.getPassword());
+
         ModUsers addUsers = ModUsers.builder()
                 .username(dto.getUsername())
                 .password(encodedPassword)
                 .permission(dto.getPermission())
+                .phone(dto.getPhone())  // 添加电话号码
                 .build();
+
         baseMapper.insert(addUsers);
         return addUsers;
     }

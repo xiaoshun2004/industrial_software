@@ -1,17 +1,17 @@
 package com.scut.industrial_software.model.dto;
 
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.validator.constraints.Length;
-import jakarta.validation.constraints.NotEmpty;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserRegisterDTO {
-
     @NotEmpty(message = "用户名不能为空")
     private String username;
 
@@ -21,4 +21,7 @@ public class UserRegisterDTO {
 
     @NotNull(message = "权限不能为空")
     private Integer permission;
+
+    @Pattern(regexp = "^\\d{11}$", message = "手机号必须为11位数字")
+    private String phone;
 }
