@@ -1,7 +1,6 @@
-package com.scut.industrial_software.controller;
+package com.scut.industrial_software.controller.User;
 
 import com.scut.industrial_software.common.api.ApiResult;
-import com.scut.industrial_software.model.dto.LoginInfoDTO;
 import com.scut.industrial_software.model.dto.UserLoginDTO;
 import com.scut.industrial_software.model.entity.ModUsers;
 import com.scut.industrial_software.model.vo.LoginResponseVO;

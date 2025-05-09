@@ -1,10 +1,7 @@
 package com.scut.industrial_software.service;
 
 import com.scut.industrial_software.common.api.ApiResult;
-import com.scut.industrial_software.model.dto.ChangePasswordDTO;
-import com.scut.industrial_software.model.dto.UserLoginDTO;
-import com.scut.industrial_software.model.dto.UserPageQueryDTO;
-import com.scut.industrial_software.model.dto.UserRegisterDTO;
+import com.scut.industrial_software.model.dto.*;
 import com.scut.industrial_software.model.entity.ModUsers;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.scut.industrial_software.model.vo.PageVO;
@@ -60,4 +57,13 @@ public interface IModUsersService extends IService<ModUsers> {
      * @return
      */
     ApiResult<Object> changePassword(Long userId, @Valid ChangePasswordDTO changePasswordDTO);
+
+
+    /**
+     * 管理员修改用户信息
+     * @param userId
+     * @param updateDTO
+     * @return
+     */
+    ApiResult<Object> updateUserInfoByAdmin(Integer userId, @Valid AdminUpdateUserInfoDTO updateDTO);
 }

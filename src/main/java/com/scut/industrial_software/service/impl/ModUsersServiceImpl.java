@@ -167,7 +167,42 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
         return ApiResult.success("密码修改成功");
     }
 
+    /**
+     * 管理员修改用户信息
+     * @param userId
+     * @param updateDTO
+     * @return
+     */
+    public ApiResult<Object> updateUserInfoByAdmin(Integer userId, AdminUpdateUserInfoDTO updateDTO) {
+        // 获取用户信息
+        ModUsers user = baseMapper.selectById(userId);
+        if (user == null) {
+            return ApiResult.failed("用户不存在");
+        }
 
+        // 检查用户名是否已存在（如果提供了新用户名）
+        if (updateDTO.getUsername() != null && !updateDTO.getUsername().isEmpty()) {
+            LambdaQueryWrapper<ModUsers> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(ModUsers::getUsername, updateDTO.getUsername())
+                    .ne(ModUsers::getUserId, userId); // 排除当前用户
+
+            if (baseMapper.selectCount(wrapper) > 0) {
+                return ApiResult.failed("用户名已被使用");
+            }
+
+            user.setUsername(updateDTO.getUsername());
+        }
+
+        // 更新电话号码（如果提供了新电话号码）
+        if (updateDTO.getPhone() != null) {
+            user.setPhone(updateDTO.getPhone());
+        }
+
+        // 更新用户信息
+        baseMapper.updateById(user);
+
+        return ApiResult.success("用户基本信息更新成功");
+    }
 
 
     /**
