@@ -37,4 +37,15 @@ public class AdminUsersController {
         return modUsersService.updateUserInfoByAdmin(userId, updateDTO);
     }
 
+    /**
+     * 管理员重置用户密码为123456
+     * @param userId 用户ID
+     * @return 操作结果
+     */
+    @PostMapping("/{userId}/resetPassword")
+    public ApiResult<Object> resetUserPassword(@PathVariable Integer userId) {
+        log.info("管理员正在重置用户 {} 的密码", userId);
+        return modUsersService.resetPasswordByAdmin(userId);
+    }
+
 }

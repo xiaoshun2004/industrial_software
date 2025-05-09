@@ -204,6 +204,27 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
         return ApiResult.success("用户基本信息更新成功");
     }
 
+    /**
+     * 管理员重置用户密码为123456
+     * @param userId
+     * @return
+     */
+    public ApiResult<Object> resetPasswordByAdmin(Integer userId) {
+        // 获取用户信息
+        ModUsers user = baseMapper.selectById(userId);
+        if (user == null) {
+            return ApiResult.failed("用户不存在");
+        }
+        // 默认密码
+        String defaultPassword = "123456";
+        // 加密密码
+        String encodedPassword = PasswordUtil.encodePassword(defaultPassword);
+        // 更新用户密码
+        user.setPassword(encodedPassword);
+        baseMapper.updateById(user);
+        return ApiResult.success("密码已重置为默认密码：123456");
+    }
+
 
     /**
      * 根据用户ID查询用户信息

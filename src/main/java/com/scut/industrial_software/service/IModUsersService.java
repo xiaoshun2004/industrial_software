@@ -66,4 +66,11 @@ public interface IModUsersService extends IService<ModUsers> {
      * @return
      */
     ApiResult<Object> updateUserInfoByAdmin(Integer userId, @Valid AdminUpdateUserInfoDTO updateDTO);
+
+    /**
+     * 管理员重置用户密码为123456
+     * @param userId
+     * @return
+     */
+    ApiResult<Object> resetPasswordByAdmin(Integer userId);
 }
