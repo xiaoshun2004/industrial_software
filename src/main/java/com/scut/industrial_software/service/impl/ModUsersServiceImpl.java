@@ -3,11 +3,9 @@ package com.scut.industrial_software.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.common.exception.ApiAsserts;
-import com.scut.industrial_software.model.dto.UserDTO;
-import com.scut.industrial_software.model.dto.UserLoginDTO;
-import com.scut.industrial_software.model.dto.UserPageQueryDTO;
-import com.scut.industrial_software.model.dto.UserRegisterDTO;
+import com.scut.industrial_software.model.dto.*;
 import com.scut.industrial_software.model.entity.ModUsers;
 import com.scut.industrial_software.mapper.ModUsersMapper;
 import com.scut.industrial_software.model.vo.PageVO;
@@ -138,6 +136,39 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
         // 根据用户ID查询用户完整信息
         return getUserInfoById(currentUser.getId());
     }
+
+    /**
+     * 用户修改密码
+     * @param userId
+     * @param changePasswordDTO
+     * @return
+     */
+    public ApiResult<Object> changePassword(Long userId, ChangePasswordDTO changePasswordDTO) {
+        // 获取用户信息
+        ModUsers user = baseMapper.selectById(userId);
+        if (user == null) {
+            return ApiResult.failed("用户不存在");
+        }
+
+        // 验证旧密码
+        if (!PasswordUtil.matches(changePasswordDTO.getOldPassword(), user.getPassword())) {
+            return ApiResult.failed("旧密码错误");
+        }
+
+        // 校验新旧密码是否相同
+        if (changePasswordDTO.getOldPassword().equals(changePasswordDTO.getNewPassword())) {
+            return ApiResult.failed("新密码不能与旧密码相同");
+        }
+        // 更新新密码
+        String encodedNewPassword = PasswordUtil.encodePassword(changePasswordDTO.getNewPassword());
+        user.setPassword(encodedNewPassword);
+        baseMapper.updateById(user); // 更新用户信息
+
+        return ApiResult.success("密码修改成功");
+    }
+
+
+
 
     /**
      * 根据用户ID查询用户信息

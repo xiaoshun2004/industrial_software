@@ -1,5 +1,7 @@
 package com.scut.industrial_software.service;
 
+import com.scut.industrial_software.common.api.ApiResult;
+import com.scut.industrial_software.model.dto.ChangePasswordDTO;
 import com.scut.industrial_software.model.dto.UserLoginDTO;
 import com.scut.industrial_software.model.dto.UserPageQueryDTO;
 import com.scut.industrial_software.model.dto.UserRegisterDTO;
@@ -7,6 +9,7 @@ import com.scut.industrial_software.model.entity.ModUsers;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.scut.industrial_software.model.vo.PageVO;
 import com.scut.industrial_software.model.vo.UserInfoVO;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -49,4 +52,12 @@ public interface IModUsersService extends IService<ModUsers> {
      * @return
      */
     UserInfoVO getCurrentUserInfo();
+
+    /**
+     * 用户修改密码
+     * @param userId
+     * @param changePasswordDTO
+     * @return
+     */
+    ApiResult<Object> changePassword(Long userId, @Valid ChangePasswordDTO changePasswordDTO);
 }

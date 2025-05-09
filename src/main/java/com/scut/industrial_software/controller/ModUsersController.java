@@ -1,12 +1,14 @@
 package com.scut.industrial_software.controller;
 
 import com.scut.industrial_software.common.api.ApiResult;
+import com.scut.industrial_software.model.dto.ChangePasswordDTO;
 import com.scut.industrial_software.model.dto.UserPageQueryDTO;
 import com.scut.industrial_software.model.dto.UserRegisterDTO;
 import com.scut.industrial_software.model.entity.ModUsers;
 import com.scut.industrial_software.model.vo.PageVO;
 import com.scut.industrial_software.model.vo.UserInfoVO;
 import com.scut.industrial_software.service.IModUsersService;
+import com.scut.industrial_software.utils.UserHolder;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -89,4 +91,17 @@ public class ModUsersController {
         return ApiResult.success(userInfo);
     }
 
+    /**
+     * 修改用户密码
+     * @param changePasswordDTO
+     * @return
+     */
+    @ResponseBody
+    @PostMapping("/changePassword")
+    public ApiResult<Object> changePassword(@Valid @RequestBody ChangePasswordDTO changePasswordDTO) {
+        log.info("用户 {} 正在修改密码", UserHolder.getUser().getId()); // 假设使用 UserHolder 获取当前用户 ID
+        Long userId = UserHolder.getUser().getId();  // 获取当前用户 ID
+
+        return iModUsersService.changePassword(userId, changePasswordDTO);
+    }
 }
