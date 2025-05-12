@@ -14,6 +14,7 @@ import com.scut.industrial_software.service.IModUsersService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.scut.industrial_software.utils.PasswordUtil;
 import com.scut.industrial_software.utils.UserHolder;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
@@ -143,6 +144,7 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
      * @param changePasswordDTO
      * @return
      */
+    @Transactional
     public ApiResult<Object> changePassword(Long userId, ChangePasswordDTO changePasswordDTO) {
         // 获取用户信息
         ModUsers user = baseMapper.selectById(userId);
@@ -159,10 +161,18 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
         if (changePasswordDTO.getOldPassword().equals(changePasswordDTO.getNewPassword())) {
             return ApiResult.failed("新密码不能与旧密码相同");
         }
+
         // 更新新密码
         String encodedNewPassword = PasswordUtil.encodePassword(changePasswordDTO.getNewPassword());
         user.setPassword(encodedNewPassword);
-        baseMapper.updateById(user); // 更新用户信息
+
+        // 调用更新方法，MyBatis-Plus 会自动加上版本条件并在成功时自增版本号
+        boolean updateSuccess = this.updateById(user);
+
+        // 如果更新失败，说明数据版本已被其他线程修改
+        if (!updateSuccess) {
+            return ApiResult.failed("用户信息已被修改，请刷新后重试");
+        }
 
         return ApiResult.success("密码修改成功");
     }

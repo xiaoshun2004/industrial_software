@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 
+import com.baomidou.mybatisplus.annotation.Version;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -38,5 +39,8 @@ public class ModUsers implements Serializable {
      * 用户电话号码
      */
     private String phone;
+
+    @Version
+    private Integer version;
 
 }
