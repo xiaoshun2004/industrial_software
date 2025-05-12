@@ -7,8 +7,10 @@ import io.jsonwebtoken.Claims;
 import jakarta.servlet.*;
 import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.http.impl.client.RequestWrapper;
 
 import java.io.IOException;
 
@@ -25,20 +27,19 @@ public class TokenFilter implements Filter {
             String requestURI = request.getRequestURI(); // /employee/login
 
             log.info("当前请求 URI: {}", requestURI);
+
             // 2. 检查 URI 是否以 /api 开头，如果是，去掉 /api 前缀
             if (requestURI.startsWith("/api")) {
                 String newRequestURI = requestURI.substring(4); // 去掉 /api 部分
                 log.info("修改后的请求 URI: {}", newRequestURI);
 
-                // 创建一个新的请求，将 URI 替换为去掉 /api 后的 URI
-                RequestDispatcher dispatcher = request.getRequestDispatcher(newRequestURI);
-                dispatcher.forward(request, response);
-                return; // 请求已经被转发，不再继续执行下面的逻辑
+                // 更新请求 URI
+                request = new RequestWrapper(request, newRequestURI);
             }
 
 
             // 2.放行注册和登录请求
-            if (requestURI.equals("/modUsers/register") || requestURI.equals("/auth/jsonLogin")) {
+            if (requestURI.equals("/modUsers/register") || requestURI.equals("/auth/jsonLogin")||requestURI.equals("/api/modUsers/register") || requestURI.equals("/api/auth/jsonLogin")|| requestURI.equals("/api/auth/verifyCode")) {
                 log.info("放行请求: {}", requestURI);
                 filterChain.doFilter(request, response);
                 return;
@@ -46,6 +47,7 @@ public class TokenFilter implements Filter {
 
             //3. 获取请求头中的token
             String token = request.getHeader("Authorization");
+            log.info("au:"+token);
 
             //4. 判断token是否存在, 如果不存在, 说明用户没有登录, 返回错误信息(响应401状态码)
             if (token == null || token.isEmpty()){
@@ -81,6 +83,8 @@ public class TokenFilter implements Filter {
                 return;
             }
 
+
+
             //6. 校验通过, 放行
             log.info("令牌合法, 放行");
             filterChain.doFilter(request, response);
@@ -88,6 +92,26 @@ public class TokenFilter implements Filter {
         } finally {
             // 7. 请求处理完成后，清除ThreadLocal中的数据，防止内存泄漏
             UserHolder.removeUser();
+        }
+    }
+
+    // 自定义一个RequestWrapper，用于修改请求URI
+    private static class RequestWrapper extends HttpServletRequestWrapper {
+        private final String newRequestURI;
+
+        public RequestWrapper(HttpServletRequest request, String newRequestURI) {
+            super(request);
+            this.newRequestURI = newRequestURI;
+        }
+
+        @Override
+        public String getRequestURI() {
+            return newRequestURI;
+        }
+
+        @Override
+        public StringBuffer getRequestURL() {
+            return new StringBuffer(getScheme() + "://" + getServerName() + getServerPort() + newRequestURI);
         }
     }
 }
