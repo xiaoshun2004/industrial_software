@@ -65,16 +65,7 @@ public class ModUsersController {
         return ApiResult.success(map);
     }
 
-    /**
-     * 分页查询用户列表
-     */
-    @ResponseBody
-    @PostMapping("/page")
-    public ApiResult<PageVO<UserInfoVO>> pageUsersPost(@RequestBody UserPageQueryDTO queryDTO) {
-        log.info("用户信息分页查询...");
-        PageVO<UserInfoVO> pageResult = iModUsersService.pageUsers(queryDTO);
-        return ApiResult.success(pageResult);
-    }
+
 
     /**
      * 查询当前用户信息 回显

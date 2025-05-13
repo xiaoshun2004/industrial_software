@@ -73,4 +73,11 @@ public interface IModUsersService extends IService<ModUsers> {
      * @return
      */
     ApiResult<Object> resetPasswordByAdmin(Integer userId);
+
+    /**
+     * 管理员删除用户
+     * @param userId
+     * @return
+     */
+    ApiResult<Object> deleteUserByAdmin(Integer userId);
 }

@@ -235,6 +235,32 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
         return ApiResult.success("密码已重置为默认密码：123456");
     }
 
+    /**
+     * 管理员删除用户
+     * @param userId
+     * @return
+     */
+    public ApiResult<Object> deleteUserByAdmin(Integer userId) {
+        if (UserHolder.getUser().getId().equals(userId.longValue())) {
+            return ApiResult.failed("管理员不能删除自己的账户");
+        }
+        // 获取用户信息
+        ModUsers user = baseMapper.selectById(userId);
+        if (user == null) {
+            return ApiResult.failed("用户不存在");
+        }
+
+        try {
+            // 删除用户
+            baseMapper.deleteById(userId);
+            return ApiResult.success("用户删除成功");
+        } catch (Exception e) {
+            // 捕获异常并记录日志
+            log.error("删除用户失败", e);
+            return ApiResult.failed("删除用户失败");
+        }
+    }
+
 
     /**
      * 根据用户ID查询用户信息
