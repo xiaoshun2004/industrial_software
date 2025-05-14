@@ -4,6 +4,7 @@ import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.model.dto.*;
 import com.scut.industrial_software.model.entity.ModUsers;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.scut.industrial_software.model.vo.LoginResponseVO;
 import com.scut.industrial_software.model.vo.PageVO;
 import com.scut.industrial_software.model.vo.UserInfoVO;
 import jakarta.validation.Valid;
@@ -35,6 +36,11 @@ public interface IModUsersService extends IService<ModUsers> {
      */
     ModUsers executeRegister(UserRegisterDTO userRegisterDTO);
 
+    /**
+     * 用户登录
+     * @param userLoginDTO
+     * @return
+     */
     ModUsers login(UserLoginDTO userLoginDTO);
 
     /**
@@ -80,4 +86,6 @@ public interface IModUsersService extends IService<ModUsers> {
      * @return
      */
     ApiResult<Object> deleteUserByAdmin(Integer userId);
+
+
 }

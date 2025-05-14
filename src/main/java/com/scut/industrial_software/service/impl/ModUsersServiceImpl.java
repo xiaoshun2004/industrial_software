@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.common.exception.ApiAsserts;
+import com.scut.industrial_software.model.constant.RedisConstants;
 import com.scut.industrial_software.model.dto.*;
 import com.scut.industrial_software.model.entity.ModUsers;
 import com.scut.industrial_software.mapper.ModUsersMapper;
@@ -15,13 +16,16 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.scut.industrial_software.utils.PasswordUtil;
 import com.scut.industrial_software.utils.UserHolder;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <p>
@@ -32,7 +36,14 @@ import java.util.List;
  * @since 2025-03-29
  */
 @Service
+@Slf4j
 public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> implements IModUsersService {
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
+    @Autowired
+    private TokenBlacklistService tokenBlacklistService;
 
     /**
      * 返回所有用户信息（测试）
@@ -71,7 +82,11 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
         return addUsers;
     }
 
-    @Override
+    /**
+     * 用户登录
+     * @param userLoginDTO
+     * @return
+     */
     public ModUsers login(UserLoginDTO userLoginDTO) {
         // 1. 根据用户名查询用户（假设用户名唯一）
         LambdaQueryWrapper<ModUsers> queryWrapper = new LambdaQueryWrapper<>();
@@ -251,6 +266,17 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
         }
 
         try {
+            String redisTokenKey = RedisConstants.USER_TOKEN_KEY_PREFIX + user.getUsername() + ":token";
+            String token = redisTemplate.opsForValue().get(redisTokenKey);
+
+            if (token != null && !token.isEmpty()) {
+                // 加入黑名单，过期时间与 token 有效期一致
+                tokenBlacklistService.addToBlacklist(token);
+                /*// 可选：删除该 token
+                redisTemplate.delete(redisTokenKey);*/
+                log.info("用户 [{}] 的 token 已加入黑名单", user.getUsername());
+            }
+
             // 删除用户
             baseMapper.deleteById(userId);
             return ApiResult.success("用户删除成功");

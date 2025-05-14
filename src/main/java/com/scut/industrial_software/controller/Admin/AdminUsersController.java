@@ -6,6 +6,7 @@ import com.scut.industrial_software.model.dto.UserPageQueryDTO;
 import com.scut.industrial_software.model.vo.PageVO;
 import com.scut.industrial_software.model.vo.UserInfoVO;
 import com.scut.industrial_software.service.IModUsersService;
+import com.scut.industrial_software.service.impl.TokenBlacklistService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,8 @@ public class AdminUsersController {
     @Autowired
     private IModUsersService modUsersService;
 
+    @Autowired
+    private TokenBlacklistService tokenBlacklistService;
 
 
     /**

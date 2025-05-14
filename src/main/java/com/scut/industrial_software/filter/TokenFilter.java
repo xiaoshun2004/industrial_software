@@ -1,6 +1,7 @@
 package com.scut.industrial_software.filter;
 
 import com.scut.industrial_software.model.dto.UserDTO;
+import com.scut.industrial_software.service.impl.TokenBlacklistService;
 import com.scut.industrial_software.utils.JwtUtils;
 import com.scut.industrial_software.utils.UserHolder;
 import io.jsonwebtoken.Claims;
@@ -10,13 +11,24 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.impl.client.RequestWrapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.io.IOException;
+
+import static com.scut.industrial_software.model.constant.RedisConstants.USER_TOKEN_KEY_PREFIX;
+
 
 @Slf4j
 @WebFilter(urlPatterns = "/*")
 public class TokenFilter implements Filter {
+
+    @Autowired
+    private TokenBlacklistService tokenBlacklistService;
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
@@ -38,6 +50,7 @@ public class TokenFilter implements Filter {
             }
 
 
+
             // 2.放行注册和登录请求
             if (requestURI.equals("/modUsers/register") || requestURI.equals("/auth/jsonLogin")||requestURI.equals("/api/modUsers/register") || requestURI.equals("/api/auth/jsonLogin")|| requestURI.equals("/api/auth/verifyCode")) {
                 log.info("放行请求: {}", requestURI);
@@ -56,6 +69,14 @@ public class TokenFilter implements Filter {
                 return;
             }
 
+            //检查token是否在黑名单当中
+            if (tokenBlacklistService.isTokenBlacklisted(token)) {
+                log.info("token在黑名单当中,拒绝访问");
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);  // Token 在黑名单中，返回 403
+                response.getWriter().write("Token in blacklist");
+                return;
+            }
+
             //5. 如果token存在, 校验令牌, 如果校验失败 -> 返回错误信息(响应401状态码)
             try {
                 log.info("获取到的 Token: {}", token);
@@ -71,6 +92,15 @@ public class TokenFilter implements Filter {
                 UserDTO userDTO = new UserDTO();
                 userDTO.setId(userId);
                 userDTO.setName(name);
+
+                String redisToken = redisTemplate.opsForValue().get(USER_TOKEN_KEY_PREFIX + name + ":token");
+                if (redisToken == null || !redisToken.equals(token)) {
+                    log.info("Token 与 Redis 中不一致，说明已在其他设备登录，响应401");
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
+
+
                 log.info("当前用户id，name：{},{}",userId,name);
                 // 设置其他需要的字段...
 

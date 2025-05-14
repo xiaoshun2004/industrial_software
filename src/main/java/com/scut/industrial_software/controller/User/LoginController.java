@@ -1,29 +1,40 @@
 package com.scut.industrial_software.controller.User;
 
 import com.scut.industrial_software.common.api.ApiResult;
+import com.scut.industrial_software.model.constant.RedisConstants;
 import com.scut.industrial_software.model.dto.UserLoginDTO;
 import com.scut.industrial_software.model.entity.ModUsers;
 import com.scut.industrial_software.model.vo.LoginResponseVO;
 import com.scut.industrial_software.service.IModUsersService;
 import com.scut.industrial_software.utils.JwtUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
+
+@Slf4j
 @RestController
 public class LoginController {
 
     @Autowired
     private IModUsersService iModUsersService;
 
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
     @PostMapping("auth/jsonLogin")
     public ApiResult<LoginResponseVO> login(@RequestBody UserLoginDTO dto){
+
+        log.info("用户登录，name：{}",dto.getUsername());
         //todo:验证码
-        System.out.println("开始认证");
+
         // 2. 验证用户
         ModUsers user = iModUsersService.login(dto);
         if (user == null) {
@@ -35,7 +46,16 @@ public class LoginController {
         claims.put("name",user.getUsername());
         String token = JwtUtils.generateToken(claims);
 
-        // 4. 构建登录响应VO
+        // 4. 存入 Redis 并设置过期时间
+        redisTemplate.opsForValue().set(
+                RedisConstants.USER_TOKEN_KEY_PREFIX + user.getUsername() + ":token",
+                token,
+                RedisConstants.TOKEN_TTL,
+                TimeUnit.MINUTES
+        );
+
+
+        // 5. 构建登录响应VO
         LoginResponseVO responseVO = LoginResponseVO.builder()
                 .userId(user.getUserId())
                 .username(user.getUsername())
