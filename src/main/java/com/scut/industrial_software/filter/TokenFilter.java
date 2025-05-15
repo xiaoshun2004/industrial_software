@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
@@ -20,6 +21,7 @@ import static com.scut.industrial_software.model.constant.RedisConstants.USER_TO
 
 
 @Slf4j
+@Component
 @WebFilter(urlPatterns = "/*")
 public class TokenFilter implements Filter {
 
@@ -52,7 +54,7 @@ public class TokenFilter implements Filter {
 
 
             // 2.放行注册和登录请求
-            if (requestURI.equals("/modUsers/register") || requestURI.equals("/auth/jsonLogin")||requestURI.equals("/api/modUsers/register") || requestURI.equals("/api/auth/jsonLogin")|| requestURI.equals("/api/auth/verifyCode")) {
+            if (requestURI.equals("/auth/verifyCode")||requestURI.equals("/modUsers/register") || requestURI.equals("/auth/jsonLogin")||requestURI.equals("/api/modUsers/register") || requestURI.equals("/api/auth/jsonLogin")|| requestURI.equals("/api/auth/verifyCode")) {
                 log.info("放行请求: {}", requestURI);
                 filterChain.doFilter(request, response);
                 return;

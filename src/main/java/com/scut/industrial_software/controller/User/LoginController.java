@@ -34,7 +34,16 @@ public class LoginController {
 
         log.info("用户登录，name：{}",dto.getUsername());
         //todo:验证码
-
+        String verifyKey = RedisConstants.VERIFY_CODE_PREFIX + dto.getKey();
+        String codeInRedis = redisTemplate.opsForValue().get(verifyKey);
+        if (codeInRedis == null) {
+            return ApiResult.failed("验证码已过期");
+        }
+        if (!codeInRedis.equalsIgnoreCase(dto.getVerificationCode())) {
+            return ApiResult.failed("验证码错误");
+        }
+        // 校验通过后删除，避免重复使用
+        redisTemplate.delete(verifyKey);
         // 2. 验证用户
         ModUsers user = iModUsersService.login(dto);
         if (user == null) {

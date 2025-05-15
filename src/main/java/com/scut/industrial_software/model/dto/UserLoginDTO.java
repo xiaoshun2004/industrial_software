@@ -20,4 +20,7 @@ public class UserLoginDTO {
 
     @NotNull(message = "验证码不能为空")
     private String verificationCode;
+
+    @NotNull(message = "键值不能为空")
+    private String key;
 }
