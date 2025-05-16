@@ -311,4 +311,18 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
         return userInfoVO;
     }
 
+    @Override
+    public ApiResult<Object> changePermissionByAdmin(Integer userId, Integer permission) {
+        // 1. 查询用户是否存在
+        ModUsers user = baseMapper.selectById(userId);
+        if (user == null) {
+            return ApiResult.failed("用户不存在");
+        }
+        // 2. 更新权限（0 或 1）
+        user.setPermission(permission);
+        baseMapper.updateById(user);
+        log.info("管理员将用户 {} 的权限修改为 {}", userId, permission);
+        return ApiResult.success("权限修改成功");
+    }
+
 }

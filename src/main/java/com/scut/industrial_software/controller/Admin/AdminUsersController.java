@@ -78,4 +78,22 @@ public class AdminUsersController {
         return modUsersService.deleteUserByAdmin(userId);
     }
 
+    /**
+     * 修改用户权限
+     * @return
+     */
+    @ResponseBody
+    @PostMapping("/{userId}/changePermission")
+    public ApiResult<Object> changePermission(@PathVariable Integer userId,
+                                              @RequestParam Integer permission){
+
+
+        log.info("管理员正在修改用户 {} 的权限为 {}", userId, permission);
+        // 校验只能是 0 或 1
+        if (permission == null || (permission != 0 && permission != 1)) {
+            return ApiResult.failed("permission 只能是 0 或 1");
+        }
+        return modUsersService.changePermissionByAdmin(userId, permission);
+    }
+
 }

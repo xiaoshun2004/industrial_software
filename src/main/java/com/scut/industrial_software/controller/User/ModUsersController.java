@@ -2,10 +2,8 @@ package com.scut.industrial_software.controller.User;
 
 import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.model.dto.ChangePasswordDTO;
-import com.scut.industrial_software.model.dto.UserPageQueryDTO;
 import com.scut.industrial_software.model.dto.UserRegisterDTO;
 import com.scut.industrial_software.model.entity.ModUsers;
-import com.scut.industrial_software.model.vo.PageVO;
 import com.scut.industrial_software.model.vo.UserInfoVO;
 import com.scut.industrial_software.service.IModUsersService;
 import com.scut.industrial_software.utils.UserHolder;
@@ -95,4 +93,6 @@ public class ModUsersController {
 
         return iModUsersService.changePassword(userId, changePasswordDTO);
     }
+
+
 }

@@ -87,5 +87,13 @@ public interface IModUsersService extends IService<ModUsers> {
      */
     ApiResult<Object> deleteUserByAdmin(Integer userId);
 
+    /**
+     * 管理员根据用户ID修改权限（只能是 0 或 1）
+     * @param userId 用户ID
+     * @param permission 新的权限值（0 或 1）
+     * @return 操作结果
+     */
+    ApiResult<Object> changePermissionByAdmin(Integer userId, Integer permission);
+
 
 }
