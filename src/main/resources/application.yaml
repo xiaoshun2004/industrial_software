@@ -32,7 +32,7 @@ spring:
 # MyBatis-Plus 配置
 mybatis-plus:
   # 配置 mapper xml 文件路径
-  mapper-locations: classpath:mapper/*.xml
+  mapper-locations: classpath*:com/scut/industrial_software/mapper/xml/*.xml
   # 实体扫描，多个package用逗号或者分号分隔
   type-aliases-package: com.scut.industrial_software.entity
   global-config:

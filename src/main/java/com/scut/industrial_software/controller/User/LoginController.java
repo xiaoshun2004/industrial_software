@@ -21,17 +21,17 @@ public class LoginController {
     public ApiResult<LoginResponseVO> login(@RequestBody UserLoginDTO dto) {
         log.info("用户登录，name：{}", dto.getUsername());
         
-        // 1. 验证验证码
-        if (!authService.verifyCode(dto.getKey(), dto.getVerificationCode())) {
-            return ApiResult.failed("验证码错误或已过期");
-        }
+        // // 1. 验证验证码
+        // if (!authService.verifyCode(dto.getKey(), dto.getVerificationCode())) {
+        //     return ApiResult.failed("验证码错误或已过期");
+        // }
 
         // 2. 执行登录
         LoginResponseVO responseVO = authService.login(dto);
         if (responseVO == null) {
             return ApiResult.failed("用户名或密码错误");
         }
-
+        
         return ApiResult.success(responseVO);
     }
 }
