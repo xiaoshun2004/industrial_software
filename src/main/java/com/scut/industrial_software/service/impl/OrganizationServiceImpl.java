@@ -8,11 +8,13 @@ import com.scut.industrial_software.mapper.OrganizationMapper;
 import com.scut.industrial_software.mapper.UserOrganizationMapper;
 import com.scut.industrial_software.model.dto.AddMembersDTO;
 import com.scut.industrial_software.model.dto.CreateOrganizationDTO;
+import com.scut.industrial_software.model.dto.MemberPageQueryDTO;
 import com.scut.industrial_software.model.dto.OrganizationPageQueryDTO;
 import com.scut.industrial_software.model.dto.UserDTO;
 import com.scut.industrial_software.model.entity.ModUsers;
 import com.scut.industrial_software.model.entity.Organization;
 import com.scut.industrial_software.model.entity.UserOrganization;
+import com.scut.industrial_software.model.vo.MemberVO;
 import com.scut.industrial_software.model.vo.OrganizationVO;
 import com.scut.industrial_software.model.vo.PageVO;
 import com.scut.industrial_software.service.IModUsersService;
@@ -45,6 +47,11 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
     @Autowired
     private IModUsersService modUsersService;
 
+    /**
+     * 分页查询组织列表
+     * @param queryDTO 查询参数，包含分页信息和关键词
+     * @return 分页结果
+     */
     @Override
     public PageVO<OrganizationVO> pageOrganizations(OrganizationPageQueryDTO queryDTO) {
         // 1. 构建分页参数
@@ -62,6 +69,11 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
         );
     }
 
+    /**
+     * 创建新组织
+     * @param createDTO 创建组织的请求参数
+     * @return 创建结果
+     */
     @Override
     public ApiResult<Object> createOrganization(CreateOrganizationDTO createDTO) {
         // 1. 检查组织名称是否已存在
@@ -96,6 +108,12 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
         return ApiResult.success("组织创建成功");
     }
 
+    /**
+     * 向组织添加成员
+     * @param orgId 组织ID
+     * @param addMembersDTO 添加成员的请求参数，包含用户ID列表
+     * @return 添加结果
+     */
     @Override
     @Transactional
     public ApiResult<Object> addMembersToOrganization(Integer orgId, AddMembersDTO addMembersDTO) {
@@ -153,6 +171,12 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
         return ApiResult.success("成功添加 " + userIdList.size() + " 个成员到组织");
     }
 
+    /**
+     * 从组织中移除成员
+     * @param orgId 组织ID
+     * @param memberId 成员用户ID
+     * @return 移除结果
+     */
     @Override
     @Transactional
     public ApiResult<Object> removeMemberFromOrganization(Integer orgId, Integer memberId) {
@@ -186,5 +210,62 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
         } else {
             return ApiResult.failed("移除成员失败");
         }
+    }
+
+    /**
+     * 分页查询组织成员列表
+     * @param orgId 组织ID
+     * @param queryDTO 查询参数，包含分页信息
+     * @return 分页结果
+     */
+    @Override
+    public PageVO<MemberVO> getOrganizationMembers(Integer orgId, MemberPageQueryDTO queryDTO) {
+        // 1. 检查组织是否存在
+        Organization organization = this.getById(orgId);
+        if (organization == null) {
+            // 如果组织不存在，返回空的分页结果
+            return PageVO.build(
+                    new ArrayList<>(),
+                    0L,
+                    queryDTO.getPageNum(),
+                    queryDTO.getPageSize()
+            );
+        }
+
+        // 2. 构建分页参数
+        Page<MemberVO> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
+
+        // 3. 执行分页查询
+        Page<MemberVO> memberPage = baseMapper.selectOrganizationMembers(page, orgId);
+
+        // 4. 构建并返回分页结果
+        return PageVO.build(
+                memberPage.getRecords(),
+                memberPage.getTotal(),
+                queryDTO.getPageNum(),
+                queryDTO.getPageSize()
+        );
+    }
+
+    /**
+     * 分页查询未分配组织的成员列表
+     * @param queryDTO 查询参数，包含分页信息
+     * @return 分页结果
+     */
+    @Override
+    public PageVO<MemberVO> getUnassignedMembers(MemberPageQueryDTO queryDTO) {
+        // 1. 构建分页参数
+        Page<MemberVO> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
+
+        // 2. 执行分页查询
+        Page<MemberVO> memberPage = baseMapper.selectUnassignedMembers(page);
+
+        // 3. 构建并返回分页结果
+        return PageVO.build(
+                memberPage.getRecords(),
+                memberPage.getTotal(),
+                queryDTO.getPageNum(),
+                queryDTO.getPageSize()
+        );
     }
 } 

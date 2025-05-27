@@ -18,4 +18,26 @@
         ORDER BY o.create_time DESC
     </select>
 
+    <select id="selectOrganizationMembers" resultType="com.scut.industrial_software.model.vo.MemberVO">
+        SELECT 
+            CAST(u.user_id AS CHAR) as userId,
+            u.username as userName
+        FROM user_organization uo
+        INNER JOIN mod_users u ON uo.user_id = u.user_id
+        WHERE uo.org_id = #{orgId}
+        ORDER BY u.username
+    </select>
+
+    <select id="selectUnassignedMembers" resultType="com.scut.industrial_software.model.vo.MemberVO">
+        SELECT 
+            CAST(u.user_id AS CHAR) as userId,
+            u.username as userName
+        FROM mod_users u
+        WHERE u.user_id NOT IN (
+            SELECT DISTINCT uo.user_id 
+            FROM user_organization uo
+        )
+        ORDER BY u.username
+    </select>
+
 </mapper> 

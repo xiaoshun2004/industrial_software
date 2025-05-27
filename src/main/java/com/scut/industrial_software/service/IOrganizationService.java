@@ -4,8 +4,10 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.model.dto.AddMembersDTO;
 import com.scut.industrial_software.model.dto.CreateOrganizationDTO;
+import com.scut.industrial_software.model.dto.MemberPageQueryDTO;
 import com.scut.industrial_software.model.dto.OrganizationPageQueryDTO;
 import com.scut.industrial_software.model.entity.Organization;
+import com.scut.industrial_software.model.vo.MemberVO;
 import com.scut.industrial_software.model.vo.OrganizationVO;
 import com.scut.industrial_software.model.vo.PageVO;
 
@@ -48,4 +50,19 @@ public interface IOrganizationService extends IService<Organization> {
      * @return 操作结果
      */
     ApiResult<Object> removeMemberFromOrganization(Integer orgId, Integer memberId);
+
+    /**
+     * 分页查询组织成员列表
+     * @param orgId 组织ID
+     * @param queryDTO 查询参数
+     * @return 成员列表
+     */
+    PageVO<MemberVO> getOrganizationMembers(Integer orgId, MemberPageQueryDTO queryDTO);
+
+    /**
+     * 分页查询未分配成员列表
+     * @param queryDTO 查询参数
+     * @return 未分配成员列表
+     */
+    PageVO<MemberVO> getUnassignedMembers(MemberPageQueryDTO queryDTO);
 } 
