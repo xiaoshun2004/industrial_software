@@ -2,4 +2,50 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.scut.industrial_software.mapper.ModProjectsMapper">
 
+    <!-- 分页查询共享项目 -->
+    <select id="selectSharedProjectsByPage" resultType="java.util.Map">
+        SELECT 
+            p.project_id AS projectId,
+            p.project_name AS project_name,
+            p.project_stage AS project_stage,
+            p.creation_time AS creation_time,
+            u.username AS creator,
+            o.org_name AS organization
+        FROM mod_projects p
+        LEFT JOIN mod_users u ON p.creator = u.user_id
+        LEFT JOIN organization o ON p.organization_id = o.org_id
+        WHERE p.project_status = 0
+        <if test="keyword != null and keyword != ''">
+            AND (
+                p.project_name LIKE CONCAT('%', #{keyword}, '%')
+                OR o.org_name LIKE CONCAT('%', #{keyword}, '%')
+                OR u.username LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+        ORDER BY p.creation_time DESC
+    </select>
+    
+    <!-- 分页查询私人项目 -->
+    <select id="selectPrivateProjectsByPage" resultType="java.util.Map">
+        SELECT 
+            p.project_id AS projectId,
+            p.project_name AS project_name,
+            p.project_stage AS project_stage,
+            p.creation_time AS creation_time,
+            u.username AS creator,
+            o.org_name AS organization
+        FROM mod_projects p
+        LEFT JOIN mod_users u ON p.creator = u.user_id
+        LEFT JOIN organization o ON p.organization_id = o.org_id
+        WHERE p.project_status = 1
+        AND p.creator = #{creator}
+        <if test="keyword != null and keyword != ''">
+            AND (
+                p.project_name LIKE CONCAT('%', #{keyword}, '%')
+                OR o.org_name LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+        ORDER BY p.creation_time DESC
+    </select>
+
 </mapper>

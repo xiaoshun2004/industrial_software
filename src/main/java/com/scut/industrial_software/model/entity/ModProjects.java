@@ -1,6 +1,7 @@
 package com.scut.industrial_software.model.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
@@ -10,7 +11,7 @@ import lombok.Setter;
 
 /**
  * <p>
- * 
+ * 项目实体类
  * </p>
  *
  * @author zhou
@@ -33,6 +34,15 @@ public class ModProjects implements Serializable {
     private Integer creator;
 
     private LocalDateTime creationTime;
-
-
+    
+    /**
+     * 所属组织ID
+     */
+    private Integer organizationId;
+    
+    /**
+     * 项目状态：0-共享项目，1-私人项目
+     */
+    @TableField("project_status")
+    private Integer projectStatus;
 }

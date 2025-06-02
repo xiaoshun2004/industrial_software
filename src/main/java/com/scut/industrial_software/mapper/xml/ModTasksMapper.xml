@@ -2,4 +2,56 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.scut.industrial_software.mapper.ModTasksMapper">
 
+    <!-- 根据项目ID分页查询共享任务 -->
+    <select id="selectSharedTasksByPage" resultType="com.scut.industrial_software.model.entity.ModTasks">
+        SELECT 
+            t.task_id,
+            t.task_name,
+            t.task_stage,
+            t.creator AS creatorId,
+            t.creation_time,
+            t.project_id,
+            t.simulation_stage,
+            t.type,
+            t.status,
+            u.username AS creator
+        FROM mod_tasks t
+        LEFT JOIN mod_users u ON t.creator = u.user_id
+        LEFT JOIN mod_projects p ON t.project_id = p.project_id
+        WHERE t.project_id = #{projectId}
+        AND p.project_status = 0
+        <if test="keyword != null and keyword != ''">
+            AND (
+                t.task_name LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+        ORDER BY t.creation_time DESC
+    </select>
+    
+    <!-- 根据项目ID分页查询私人任务 -->
+    <select id="selectPrivateTasksByPage" resultType="com.scut.industrial_software.model.entity.ModTasks">
+        SELECT 
+            t.task_id,
+            t.task_name,
+            t.task_stage,
+            t.creator AS creatorId,
+            t.creation_time,
+            t.project_id,
+            t.simulation_stage,
+            t.type,
+            t.status,
+            u.username AS creator
+        FROM mod_tasks t
+        LEFT JOIN mod_users u ON t.creator = u.user_id
+        LEFT JOIN mod_projects p ON t.project_id = p.project_id
+        WHERE t.project_id = #{projectId}
+        AND p.project_status = 1
+        <if test="keyword != null and keyword != ''">
+            AND (
+                t.task_name LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+        ORDER BY t.creation_time DESC
+    </select>
+
 </mapper>
