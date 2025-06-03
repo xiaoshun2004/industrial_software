@@ -1,4 +1,4 @@
-package com.scut.industrial_software.controller;
+package com.scut.industrial_software.controller.Project;
 
 import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.model.dto.PageRequestDTO;

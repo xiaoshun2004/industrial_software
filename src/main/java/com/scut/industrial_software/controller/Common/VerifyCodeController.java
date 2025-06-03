@@ -1,4 +1,4 @@
-package com.scut.industrial_software.controller;
+package com.scut.industrial_software.controller.Common;
 
 import com.google.code.kaptcha.impl.DefaultKaptcha;
 import com.scut.industrial_software.common.api.ApiResult;

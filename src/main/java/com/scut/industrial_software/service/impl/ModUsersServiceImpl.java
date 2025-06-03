@@ -8,7 +8,11 @@ import com.scut.industrial_software.common.exception.ApiAsserts;
 import com.scut.industrial_software.model.constant.RedisConstants;
 import com.scut.industrial_software.model.dto.*;
 import com.scut.industrial_software.model.entity.ModUsers;
+import com.scut.industrial_software.model.entity.Organization;
+import com.scut.industrial_software.model.entity.UserOrganization;
 import com.scut.industrial_software.mapper.ModUsersMapper;
+import com.scut.industrial_software.mapper.OrganizationMapper;
+import com.scut.industrial_software.mapper.UserOrganizationMapper;
 import com.scut.industrial_software.model.vo.PageVO;
 import com.scut.industrial_software.model.vo.UserInfoVO;
 import com.scut.industrial_software.service.IModUsersService;
@@ -24,7 +28,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -44,6 +50,12 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
 
     @Autowired
     private TokenBlacklistService tokenBlacklistService;
+
+    @Autowired
+    private OrganizationMapper organizationMapper;
+    
+    @Autowired
+    private UserOrganizationMapper userOrganizationMapper;
 
     /**
      * 返回所有用户信息（测试）
@@ -122,11 +134,13 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
         // 3. 执行分页查询
         Page<ModUsers> userPage = this.page(page, queryWrapper);
 
-        // 4. 转换实体为VO (直接在循环中使用BeanUtils)
+        // 4. 转换实体为VO，并添加组织信息
         List<UserInfoVO> userVOList = new ArrayList<>();
         for (ModUsers user : userPage.getRecords()) {
             UserInfoVO vo = new UserInfoVO();
             BeanUtils.copyProperties(user, vo);
+            // 查询并设置用户组织信息
+            vo.setOrganization(getUserOrganizationName(user.getUserId()));
             userVOList.add(vo);
         }
 
@@ -306,9 +320,31 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
         userInfoVO.setUserId(user.getUserId());
         userInfoVO.setUsername(user.getUsername());
         userInfoVO.setPermission(user.getPermission());
-        userInfoVO.setPhone(user.getPhone());  // 如果有电话号码字段
+        userInfoVO.setPhone(user.getPhone());
+        // 查询并设置用户组织信息
+        userInfoVO.setOrganization(getUserOrganizationName(user.getUserId()));
 
         return userInfoVO;
+    }
+
+    /**
+     * 根据用户ID获取用户所属组织名称
+     * @param userId 用户ID
+     * @return 组织名称，如果用户未分配组织则返回"无"
+     */
+    private String getUserOrganizationName(Integer userId) {
+        // 查询用户组织关联
+        LambdaQueryWrapper<UserOrganization> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserOrganization::getUserId, userId);
+        UserOrganization userOrg = userOrganizationMapper.selectOne(wrapper);
+        
+        if (userOrg == null) {
+            return "无";
+        }
+        
+        // 查询组织信息
+        Organization organization = organizationMapper.selectById(userOrg.getOrgId());
+        return organization != null ? organization.getOrgName() : "无";
     }
 
     @Override
@@ -323,6 +359,51 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
         baseMapper.updateById(user);
         log.info("管理员将用户 {} 的权限修改为 {}", userId, permission);
         return ApiResult.success("权限修改成功");
+    }
+
+    @Override
+    @Transactional
+    public ApiResult<Object> changeUserOrganization(UserOrganizationDTO userOrganizationDTO) {
+        // 1. 查询用户是否存在
+        Integer userId = Integer.valueOf(userOrganizationDTO.getUserId());
+        ModUsers user = baseMapper.selectById(userId);
+        if (user == null) {
+            return ApiResult.failed("用户不存在");
+        }
+
+        // 2. 删除用户原有的组织关联
+        LambdaQueryWrapper<UserOrganization> deleteWrapper = new LambdaQueryWrapper<>();
+        deleteWrapper.eq(UserOrganization::getUserId, userId);
+        userOrganizationMapper.delete(deleteWrapper);
+
+        String newOrganizationName = "无";
+        
+        // 3. 如果提供了新的组织ID且不为空字符串，则添加新的关联
+        if (userOrganizationDTO.getOrgId() != null && !userOrganizationDTO.getOrgId().trim().isEmpty()) {
+            Integer orgId = Integer.valueOf(userOrganizationDTO.getOrgId());
+            
+            // 验证组织是否存在
+            Organization organization = organizationMapper.selectById(orgId);
+            if (organization == null) {
+                return ApiResult.failed("目标组织不存在");
+            }
+            
+            // 添加新的用户组织关联
+            UserOrganization newUserOrg = UserOrganization.builder()
+                    .userId(userId)
+                    .orgId(orgId)
+                    .build();
+            userOrganizationMapper.insert(newUserOrg);
+            
+            newOrganizationName = organization.getOrgName();
+        }
+
+        log.info("用户 {} 的组织已修改为: {}", userId, newOrganizationName);
+        
+        // 4. 返回成功结果，包含新的组织名称
+        Map<String, Object> resultData = new HashMap<>();
+        resultData.put("newOrganization", newOrganizationName);
+        return ApiResult.success(resultData, "用户组织修改成功");
     }
 
 }

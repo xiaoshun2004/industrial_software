@@ -95,5 +95,11 @@ public interface IModUsersService extends IService<ModUsers> {
      */
     ApiResult<Object> changePermissionByAdmin(Integer userId, Integer permission);
 
+    /**
+     * 管理员修改用户所属组织
+     * @param userOrganizationDTO 用户组织修改DTO
+     * @return 操作结果
+     */
+    ApiResult<Object> changeUserOrganization(UserOrganizationDTO userOrganizationDTO);
 
 }

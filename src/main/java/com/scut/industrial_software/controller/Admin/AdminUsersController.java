@@ -23,7 +23,6 @@ public class AdminUsersController {
     @Autowired
     private TokenBlacklistService tokenBlacklistService;
 
-
     /**
      * 管理员修改用户信息
      * @param userId
@@ -58,6 +57,8 @@ public class AdminUsersController {
 
     /**
      * 分页查询用户列表
+     * @param queryDTO
+     * @return
      */
     @ResponseBody
     @PostMapping("/page")
@@ -80,6 +81,8 @@ public class AdminUsersController {
 
     /**
      * 修改用户权限
+     * @param userId
+     * @param permission
      * @return
      */
     @ResponseBody

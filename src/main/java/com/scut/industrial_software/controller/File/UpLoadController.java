@@ -1,4 +1,4 @@
-package com.scut.industrial_software.controller;
+package com.scut.industrial_software.controller.File;
 
 import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.utils.AliOSSUtils;

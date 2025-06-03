@@ -1,4 +1,4 @@
-package com.scut.industrial_software.controller;
+package com.scut.industrial_software.controller.View;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.stereotype.Controller;

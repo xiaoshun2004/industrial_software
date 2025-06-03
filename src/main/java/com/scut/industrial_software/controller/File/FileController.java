@@ -1,4 +1,4 @@
-package com.scut.industrial_software.controller;
+package com.scut.industrial_software.controller.File;
 
 import org.springframework.http.HttpHeaders;
 

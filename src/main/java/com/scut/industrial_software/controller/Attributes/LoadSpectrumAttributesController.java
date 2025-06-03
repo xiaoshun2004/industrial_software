@@ -1,4 +1,4 @@
-package com.scut.industrial_software.controller;
+package com.scut.industrial_software.controller.Attributes;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.stereotype.Controller;
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Controller;
  * @since 2025-03-29
  */
 @Controller
-@RequestMapping("/modRequirements")
-public class ModRequirementsController {
+@RequestMapping("/loadSpectrumAttributes")
+public class LoadSpectrumAttributesController {
 
 }
