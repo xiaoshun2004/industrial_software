@@ -1,4 +1,4 @@
-package com.scut.industrial_software.common.config;
+package com.scut.industrial_software.config;
 
 import com.google.code.kaptcha.impl.DefaultKaptcha;
 import com.google.code.kaptcha.util.Config;

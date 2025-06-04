@@ -3,7 +3,8 @@ package com.scut.industrial_software.utils;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
-import com.scut.industrial_software.common.config.AliOssProperties;
+import com.scut.industrial_software.config.AliOssProperties;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;

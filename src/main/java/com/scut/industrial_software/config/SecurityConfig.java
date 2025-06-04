@@ -1,4 +1,4 @@
-package com.scut.industrial_software.common.config;
+package com.scut.industrial_software.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

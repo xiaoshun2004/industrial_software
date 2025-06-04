@@ -1,4 +1,4 @@
-package com.scut.industrial_software.common.config;
+package com.scut.industrial_software.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;

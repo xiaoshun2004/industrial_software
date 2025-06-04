@@ -1,4 +1,4 @@
-package com.scut.industrial_software.common.config;
+package com.scut.industrial_software.config;
 
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
