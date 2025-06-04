@@ -3,6 +3,7 @@ package com.scut.industrial_software.filter;
 import com.scut.industrial_software.model.dto.UserDTO;
 import com.scut.industrial_software.service.impl.TokenBlacklistService;
 import com.scut.industrial_software.utils.JwtUtils;
+import com.scut.industrial_software.utils.LuaScriptConstants;
 import com.scut.industrial_software.utils.UserHolder;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.*;
@@ -16,8 +17,13 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
+
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 
 import static com.scut.industrial_software.model.constant.RedisConstants.USER_TOKEN_KEY_PREFIX;
+import static com.scut.industrial_software.model.constant.RedisConstants.TOKEN_TTL;
 
 
 @Slf4j
@@ -95,10 +101,12 @@ public class TokenFilter implements Filter {
                 userDTO.setId(userId);
                 userDTO.setName(name);
 
-                String redisToken = redisTemplate.opsForValue().get(USER_TOKEN_KEY_PREFIX + name + ":token");
-                if (redisToken == null || !redisToken.equals(token)) {
-                    log.info("Token 与 Redis 中不一致，说明已在其他设备登录，响应401");
+                // 使用原子化的方式验证token有效性并刷新过期时间
+                boolean isTokenValid = validateAndRefreshToken(name, token);
+                if (!isTokenValid) {
+                    log.info("Token 验证失败或已过期，响应401");
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().write("Token invalid or expired");
                     return;
                 }
 
@@ -124,6 +132,38 @@ public class TokenFilter implements Filter {
         } finally {
             // 7. 请求处理完成后，清除ThreadLocal中的数据，防止内存泄漏
             UserHolder.removeUser();
+        }
+    }
+
+    /**
+     * 原子化验证token并刷新过期时间
+     * 使用Lua脚本确保操作的原子性，避免竞态条件
+     */
+    private boolean validateAndRefreshToken(String username, String token) {
+        String tokenKey = USER_TOKEN_KEY_PREFIX + username + ":token";
+        
+        try {
+            DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+            script.setScriptText(LuaScriptConstants.VALIDATE_AND_REFRESH_TOKEN_SCRIPT);
+            script.setResultType(Long.class);
+            
+            Long result = redisTemplate.execute(script, 
+                    Arrays.asList(tokenKey), 
+                    token, 
+                    String.valueOf(TOKEN_TTL * 60));
+            
+            boolean isValid = result != null && result == 1;
+            if (isValid) {
+                log.debug("Token验证成功并刷新过期时间: {}", username);
+            } else {
+                log.warn("Token验证失败: {} - token可能已过期或被其他设备替换", username);
+            }
+            
+            return isValid;
+            
+        } catch (Exception e) {
+            log.error("Token验证过程中发生异常: {}", username, e);
+            return false;
         }
     }
 

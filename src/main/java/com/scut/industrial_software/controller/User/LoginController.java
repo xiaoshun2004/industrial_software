@@ -21,17 +21,33 @@ public class LoginController {
     public ApiResult<LoginResponseVO> login(@RequestBody UserLoginDTO dto) {
         log.info("用户登录，name：{}", dto.getUsername());
         
-        // // 1. 验证验证码
-        // if (!authService.verifyCode(dto.getKey(), dto.getVerificationCode())) {
-        //     return ApiResult.failed("验证码错误或已过期");
-        // }
+        try {
+            // // 1. 验证验证码
+            // if (!authService.verifyCode(dto.getKey(), dto.getVerificationCode())) {
+            //     return ApiResult.failed("验证码错误或已过期");
+            // }
 
-        // 2. 执行登录
-        LoginResponseVO responseVO = authService.login(dto);
-        if (responseVO == null) {
-            return ApiResult.failed("用户名或密码错误");
+            // 2. 执行登录
+            LoginResponseVO responseVO = authService.login(dto);
+            if (responseVO == null) {
+                return ApiResult.failed("用户名或密码错误");
+            }
+            
+            return ApiResult.success(responseVO);
+            
+        } catch (RuntimeException e) {
+            // 处理分布式锁获取失败等运行时异常
+            String message = e.getMessage();
+            if (message != null && message.contains("分布式锁")) {
+                log.info("用户 {} 并发登录被拒绝: {}", dto.getUsername(), message);
+                return ApiResult.failed("登录操作正在进行中，请稍后再试");
+            } else {
+                log.info("用户 {} 登录失败: {}", dto.getUsername(), message);
+                return ApiResult.failed(message != null ? message : "登录失败");
+            }
+        } catch (Exception e) {
+            log.error("用户 {} 登录过程中发生异常", dto.getUsername(), e);
+            return ApiResult.failed("登录失败，请稍后重试");
         }
-        
-        return ApiResult.success(responseVO);
     }
 }
