@@ -7,6 +7,7 @@ import com.scut.industrial_software.model.dto.UserOrganizationDTO;
 import com.scut.industrial_software.model.vo.PageVO;
 import com.scut.industrial_software.model.vo.UserInfoVO;
 import com.scut.industrial_software.service.IModUsersService;
+import com.scut.industrial_software.service.IPermissionService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,9 @@ public class PermissionController {
 
     @Autowired
     private IModUsersService modUsersService;
+    
+    @Autowired
+    private IPermissionService permissionService;
 
     /**
      * 获取用户分页列表
@@ -48,20 +52,24 @@ public class PermissionController {
         log.info("修改用户权限，用户ID: {}, 目标权限: {}", 
                 permissionDTO.getUserId(), permissionDTO.getPermission());
         
-        // 校验权限值只能是 0 或 1
-        if (permissionDTO.getPermission() != 0 && permissionDTO.getPermission() != 1) {
-            return ApiResult.failed("权限值只能是 0（普通用户）或 1（管理员）");
+        try {
+            // 检查当前用户是否有管理员权限
+            if (!permissionService.isCurrentUserAdmin()) {
+                return ApiResult.forbidden("没有权限执行此操作");
+            }
+            
+            Integer userId = Integer.valueOf(permissionDTO.getUserId());
+            
+            // 使用并发安全的权限修改方法
+            return permissionService.changeUserPermissionSafely(userId, permissionDTO.getPermission());
+            
+        } catch (NumberFormatException e) {
+            log.warn("用户ID格式错误: {}", permissionDTO.getUserId());
+            return ApiResult.failed("用户ID格式错误");
+        } catch (Exception e) {
+            log.error("修改用户权限时发生异常", e);
+            return ApiResult.failed("权限修改失败，请稍后重试");
         }
-        
-        Integer userId = Integer.valueOf(permissionDTO.getUserId());
-        ApiResult<Object> result = modUsersService.changePermissionByAdmin(userId, permissionDTO.getPermission());
-        
-        // 如果成功，修改返回消息以符合接口文档
-        if (result.getCode() == 200) {
-            return ApiResult.success("权限修改成功");
-        }
-        
-        return result;
     }
 
     /**

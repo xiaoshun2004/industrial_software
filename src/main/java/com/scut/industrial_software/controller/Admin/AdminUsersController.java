@@ -6,6 +6,7 @@ import com.scut.industrial_software.model.dto.UserPageQueryDTO;
 import com.scut.industrial_software.model.vo.PageVO;
 import com.scut.industrial_software.model.vo.UserInfoVO;
 import com.scut.industrial_software.service.IModUsersService;
+import com.scut.industrial_software.service.IPermissionService;
 import com.scut.industrial_software.service.impl.TokenBlacklistService;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +20,9 @@ public class AdminUsersController {
 
     @Autowired
     private IModUsersService modUsersService;
+
+    @Autowired
+    private IPermissionService permissionService;
 
     @Autowired
     private TokenBlacklistService tokenBlacklistService;
@@ -90,13 +94,21 @@ public class AdminUsersController {
     public ApiResult<Object> changePermission(@PathVariable Integer userId,
                                               @RequestParam Integer permission){
 
-
         log.info("管理员正在修改用户 {} 的权限为 {}", userId, permission);
-        // 校验只能是 0 或 1
-        if (permission == null || (permission != 0 && permission != 1)) {
-            return ApiResult.failed("permission 只能是 0 或 1");
+        
+        try {
+            // 检查当前用户是否有管理员权限
+            if (!permissionService.isCurrentUserAdmin()) {
+                return ApiResult.forbidden("没有权限执行此操作");
+            }
+            
+            // 使用并发安全的权限修改方法
+            return permissionService.changeUserPermissionSafely(userId, permission);
+            
+        } catch (Exception e) {
+            log.error("修改用户权限时发生异常", e);
+            return ApiResult.failed("权限修改失败，请稍后重试");
         }
-        return modUsersService.changePermissionByAdmin(userId, permission);
     }
 
 }
