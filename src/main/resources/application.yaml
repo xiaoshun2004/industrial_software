@@ -34,7 +34,7 @@ mybatis-plus:
   # 配置 mapper xml 文件路径
   mapper-locations: classpath*:com/scut/industrial_software/mapper/xml/*.xml
   # 实体扫描，多个package用逗号或者分号分隔
-  type-aliases-package: com.scut.industrial_software.entity
+  type-aliases-package: com.scut.industrial_software.model.entity
   global-config:
     db-config:
       # 主键类型，若数据库表使用自增主键，可设置为 AUTO
