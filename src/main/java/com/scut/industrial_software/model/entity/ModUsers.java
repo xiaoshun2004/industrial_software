@@ -36,6 +36,11 @@ public class ModUsers implements Serializable {
     private Integer permission;
 
     /**
+     * 任务权限：0-个人权限，1-组织权限
+     */
+    private Integer taskPermission;
+
+    /**
      * 用户电话号码
      */
     private String phone;

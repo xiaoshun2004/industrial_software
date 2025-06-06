@@ -21,7 +21,6 @@ import com.scut.industrial_software.utils.PasswordUtil;
 import com.scut.industrial_software.utils.UserHolder;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -31,7 +30,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /**
  * <p>
@@ -88,6 +86,7 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
                 .password(encodedPassword)
                 .permission(dto.getPermission())
                 .phone(dto.getPhone())  // 添加电话号码
+                .taskPermission(1)  // 默认组织权限
                 .build();
 
         baseMapper.insert(addUsers);
@@ -138,9 +137,30 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
         List<UserInfoVO> userVOList = new ArrayList<>();
         for (ModUsers user : userPage.getRecords()) {
             UserInfoVO vo = new UserInfoVO();
-            BeanUtils.copyProperties(user, vo);
+            // 手动设置字段以符合响应格式
+            vo.setUserId(String.valueOf(user.getUserId()));
+            vo.setUsername(user.getUsername());
+            vo.setPhone(user.getPhone());
+            vo.setPermission(user.getPermission());
+            // 从数据库字段读取taskPermission
+            vo.setTaskPermission(user.getTaskPermission());
+            
             // 查询并设置用户组织信息
-            vo.setOrganization(getUserOrganizationName(user.getUserId()));
+            UserOrganization userOrg = getUserOrganization(user.getUserId());
+            if (userOrg != null) {
+                Organization organization = organizationMapper.selectById(userOrg.getOrgId());
+                if (organization != null) {
+                    vo.setOrganization(organization.getOrgName());
+                    vo.setOrgId(String.valueOf(organization.getOrgId()));
+                } else {
+                    vo.setOrganization("无");
+                    vo.setOrgId("");
+                }
+            } else {
+                vo.setOrganization("无");
+                vo.setOrgId("");
+            }
+            
             userVOList.add(vo);
         }
 
@@ -317,14 +337,42 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
 
         // 转换为VO对象
         UserInfoVO userInfoVO = new UserInfoVO();
-        userInfoVO.setUserId(user.getUserId());
+        userInfoVO.setUserId(String.valueOf(user.getUserId()));
         userInfoVO.setUsername(user.getUsername());
         userInfoVO.setPermission(user.getPermission());
         userInfoVO.setPhone(user.getPhone());
+        // 从数据库字段读取taskPermission
+        userInfoVO.setTaskPermission(user.getTaskPermission());
+        
         // 查询并设置用户组织信息
-        userInfoVO.setOrganization(getUserOrganizationName(user.getUserId()));
+        UserOrganization userOrg = getUserOrganization(user.getUserId());
+        if (userOrg != null) {
+            Organization organization = organizationMapper.selectById(userOrg.getOrgId());
+            if (organization != null) {
+                userInfoVO.setOrganization(organization.getOrgName());
+                userInfoVO.setOrgId(String.valueOf(organization.getOrgId()));
+            } else {
+                userInfoVO.setOrganization("无");
+                userInfoVO.setOrgId("");
+            }
+        } else {
+            userInfoVO.setOrganization("无");
+            userInfoVO.setOrgId("");
+        }
 
         return userInfoVO;
+    }
+
+    /**
+     * 根据用户ID获取用户所属组织关联
+     * @param userId 用户ID
+     * @return 用户组织关联对象，如果用户未分配组织则返回null
+     */
+    private UserOrganization getUserOrganization(Integer userId) {
+        // 查询用户组织关联
+        LambdaQueryWrapper<UserOrganization> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserOrganization::getUserId, userId);
+        return userOrganizationMapper.selectOne(wrapper);
     }
 
     /**
@@ -333,10 +381,7 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
      * @return 组织名称，如果用户未分配组织则返回"无"
      */
     private String getUserOrganizationName(Integer userId) {
-        // 查询用户组织关联
-        LambdaQueryWrapper<UserOrganization> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(UserOrganization::getUserId, userId);
-        UserOrganization userOrg = userOrganizationMapper.selectOne(wrapper);
+        UserOrganization userOrg = getUserOrganization(userId);
         
         if (userOrg == null) {
             return "无";
