@@ -32,12 +32,11 @@ public class ModTasks implements Serializable {
     @JsonProperty("task_name")
     private String taskName;
 
-    private String taskStage;
-
     /**
      * 创建者用户ID（存储到数据库，但不返回给前端）
      */
     @JsonIgnore
+    @TableField("creator")
     private Integer creatorId;
     
     /**

@@ -7,7 +7,6 @@
         SELECT 
             t.task_id,
             t.task_name,
-            t.task_stage,
             t.creator AS creatorId,
             t.creation_time,
             t.project_id,
@@ -33,7 +32,6 @@
         SELECT 
             t.task_id,
             t.task_name,
-            t.task_stage,
             t.creator AS creatorId,
             t.creation_time,
             t.project_id,

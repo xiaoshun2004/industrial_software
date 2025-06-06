@@ -24,7 +24,5 @@ public class TaskProjectView implements Serializable {
 
     private String taskName;
 
-    private String taskStage;
-
 
 }
