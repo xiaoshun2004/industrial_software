@@ -29,8 +29,6 @@ public class ModProjects implements Serializable {
 
     private String projectName;
 
-    private String projectStage;
-
     private Integer creator;
 
     private LocalDateTime creationTime;

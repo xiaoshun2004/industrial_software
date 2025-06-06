@@ -89,17 +89,21 @@ public class ModProjectsServiceImpl extends ServiceImpl<ModProjectsMapper, ModPr
         }
         
         // 根据organization名字查找组织ID
-        LambdaQueryWrapper<Organization> orgWrapper = new LambdaQueryWrapper<>();
-        orgWrapper.eq(Organization::getOrgName, createDTO.getOrganization());
-        Organization organization = organizationMapper.selectOne(orgWrapper);
-        if (organization == null) {
-            return ApiResult.failed("组织不存在");
+        Integer organizationId = null;
+        if (createDTO.getOrganization() != null && !createDTO.getOrganization().equals("无")) {
+            LambdaQueryWrapper<Organization> orgWrapper = new LambdaQueryWrapper<>();
+            orgWrapper.eq(Organization::getOrgName, createDTO.getOrganization());
+            Organization organization = organizationMapper.selectOne(orgWrapper);
+            if (organization == null) {
+                return ApiResult.failed("组织不存在");
+            }
+            organizationId = organization.getOrgId();
         }
         
         ModProjects project = new ModProjects();
         project.setProjectName(createDTO.getProjectName());
         project.setCreator(user.getUserId());
-        project.setOrganizationId(organization.getOrgId());
+        project.setOrganizationId(organizationId); // 可以为null
         project.setCreationTime(LocalDateTime.now());
         project.setProjectStatus(0); // 0表示共享项目
         
@@ -126,17 +130,21 @@ public class ModProjectsServiceImpl extends ServiceImpl<ModProjectsMapper, ModPr
         }
         
         // 根据organization名字查找组织ID
-        LambdaQueryWrapper<Organization> orgWrapper = new LambdaQueryWrapper<>();
-        orgWrapper.eq(Organization::getOrgName, createDTO.getOrganization());
-        Organization organization = organizationMapper.selectOne(orgWrapper);
-        if (organization == null) {
-            return ApiResult.failed("组织不存在");
+        Integer organizationId = null;
+        if (createDTO.getOrganization() != null && !createDTO.getOrganization().equals("无")) {
+            LambdaQueryWrapper<Organization> orgWrapper = new LambdaQueryWrapper<>();
+            orgWrapper.eq(Organization::getOrgName, createDTO.getOrganization());
+            Organization organization = organizationMapper.selectOne(orgWrapper);
+            if (organization == null) {
+                return ApiResult.failed("组织不存在");
+            }
+            organizationId = organization.getOrgId();
         }
         
         ModProjects project = new ModProjects();
         project.setProjectName(createDTO.getProjectName());
         project.setCreator(user.getUserId());
-        project.setOrganizationId(organization.getOrgId());
+        project.setOrganizationId(organizationId); // 可以为null
         project.setCreationTime(LocalDateTime.now());
         project.setProjectStatus(1); // 1表示私人项目
         

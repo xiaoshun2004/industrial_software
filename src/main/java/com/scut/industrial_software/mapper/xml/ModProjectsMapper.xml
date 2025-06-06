@@ -7,7 +7,6 @@
         SELECT 
             p.project_id AS projectId,
             p.project_name AS project_name,
-            p.project_stage AS project_stage,
             p.creation_time AS creation_time,
             u.username AS creator,
             o.org_name AS organization
@@ -30,7 +29,6 @@
         SELECT 
             p.project_id AS projectId,
             p.project_name AS project_name,
-            p.project_stage AS project_stage,
             p.creation_time AS creation_time,
             u.username AS creator,
             o.org_name AS organization
