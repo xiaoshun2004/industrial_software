@@ -7,7 +7,11 @@ import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.mapper.ModTasksMapper;
 import com.scut.industrial_software.mapper.ModUsersMapper;
 import com.scut.industrial_software.mapper.OrganizationMapper;
+import com.scut.industrial_software.mapper.UserOrganizationMapper;
 import com.scut.industrial_software.model.dto.PageRequestDTO;
+import com.scut.industrial_software.model.dto.UserDTO;
+import com.scut.industrial_software.model.entity.UserOrganization;
+import com.scut.industrial_software.utils.UserHolder;
 import com.scut.industrial_software.model.dto.ProjectCreateDTO;
 import com.scut.industrial_software.model.entity.ModProjects;
 import com.scut.industrial_software.mapper.ModProjectsMapper;
@@ -23,7 +27,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -45,11 +48,30 @@ public class ModProjectsServiceImpl extends ServiceImpl<ModProjectsMapper, ModPr
 
     @Autowired
     private OrganizationMapper organizationMapper;
+    
+    @Autowired
+    private UserOrganizationMapper userOrganizationMapper;
 
     @Override
     public ApiResult<?> getSharedProjectsPage(PageRequestDTO requestDTO) {
+        // 获取当前登录用户信息
+        UserDTO currentUser = UserHolder.getUser();
+        if (currentUser == null || currentUser.getId() == null) {
+            return ApiResult.failed("用户未登录");
+        }
+        
+        // 查询当前用户所属组织
+        LambdaQueryWrapper<UserOrganization> userOrgWrapper = new LambdaQueryWrapper<>();
+        userOrgWrapper.eq(UserOrganization::getUserId, currentUser.getId().intValue());
+        UserOrganization userOrganization = userOrganizationMapper.selectOne(userOrgWrapper);
+        
+        Integer userOrgId = null;
+        if (userOrganization != null) {
+            userOrgId = userOrganization.getOrgId();
+        }
+        
         Page<Map<String, Object>> page = new Page<>(requestDTO.getPageNum(), requestDTO.getPageSize());
-        IPage<Map<String, Object>> pageResult = baseMapper.selectSharedProjectsByPage(page, requestDTO.getKeyword());
+        IPage<Map<String, Object>> pageResult = baseMapper.selectSharedProjectsByPage(page, requestDTO.getKeyword(), userOrgId);
         
         Map<String, Object> result = new HashMap<>();
         result.put("records", pageResult.getRecords());

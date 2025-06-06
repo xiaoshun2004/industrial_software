@@ -14,6 +14,14 @@
         LEFT JOIN mod_users u ON p.creator = u.user_id
         LEFT JOIN organization o ON p.organization_id = o.org_id
         WHERE p.project_status = 0
+        <choose>
+            <when test="userOrgId != null">
+                AND p.organization_id = #{userOrgId}
+            </when>
+            <otherwise>
+                AND p.organization_id IS NULL
+            </otherwise>
+        </choose>
         <if test="keyword != null and keyword != ''">
             AND (
                 p.project_name LIKE CONCAT('%', #{keyword}, '%')

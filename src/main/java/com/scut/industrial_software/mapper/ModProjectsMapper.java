@@ -23,9 +23,10 @@ public interface ModProjectsMapper extends BaseMapper<ModProjects> {
      * 
      * @param page 分页参数
      * @param keyword 搜索关键字
+     * @param userOrgId 用户所属组织ID (null表示显示无组织的项目)
      * @return 分页结果
      */
-    IPage<Map<String, Object>> selectSharedProjectsByPage(Page<Map<String, Object>> page, @Param("keyword") String keyword);
+    IPage<Map<String, Object>> selectSharedProjectsByPage(Page<Map<String, Object>> page, @Param("keyword") String keyword, @Param("userOrgId") Integer userOrgId);
     
     /**
      * 分页查询私人项目
