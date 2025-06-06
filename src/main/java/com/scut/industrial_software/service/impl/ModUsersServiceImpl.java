@@ -7,10 +7,12 @@ import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.common.exception.ApiAsserts;
 import com.scut.industrial_software.model.constant.RedisConstants;
 import com.scut.industrial_software.model.dto.*;
+import com.scut.industrial_software.model.entity.ModProjects;
 import com.scut.industrial_software.model.entity.ModUsers;
 import com.scut.industrial_software.model.entity.Organization;
 import com.scut.industrial_software.model.entity.UserOrganization;
 import com.scut.industrial_software.mapper.ModUsersMapper;
+import com.scut.industrial_software.mapper.ModProjectsMapper;
 import com.scut.industrial_software.mapper.OrganizationMapper;
 import com.scut.industrial_software.mapper.UserOrganizationMapper;
 import com.scut.industrial_software.model.vo.PageVO;
@@ -49,6 +51,9 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
     @Autowired
     private TokenBlacklistService tokenBlacklistService;
 
+    @Autowired
+    private ModProjectsMapper modProjectsMapper;
+    
     @Autowired
     private OrganizationMapper organizationMapper;
     
@@ -422,13 +427,14 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
         userOrganizationMapper.delete(deleteWrapper);
 
         String newOrganizationName = "无";
+        Integer newOrgId = null;
         
         // 3. 如果提供了新的组织ID且不为空字符串，则添加新的关联
         if (userOrganizationDTO.getOrgId() != null && !userOrganizationDTO.getOrgId().trim().isEmpty()) {
-            Integer orgId = Integer.valueOf(userOrganizationDTO.getOrgId());
+            newOrgId = Integer.valueOf(userOrganizationDTO.getOrgId());
             
             // 验证组织是否存在
-            Organization organization = organizationMapper.selectById(orgId);
+            Organization organization = organizationMapper.selectById(newOrgId);
             if (organization == null) {
                 return ApiResult.failed("目标组织不存在");
             }
@@ -436,19 +442,36 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
             // 添加新的用户组织关联
             UserOrganization newUserOrg = UserOrganization.builder()
                     .userId(userId)
-                    .orgId(orgId)
+                    .orgId(newOrgId)
                     .build();
             userOrganizationMapper.insert(newUserOrg);
             
             newOrganizationName = organization.getOrgName();
         }
 
+        // 4. 同步更新该用户创建的所有项目的所属组织
+        LambdaQueryWrapper<ModProjects> projectWrapper = new LambdaQueryWrapper<>();
+        projectWrapper.eq(ModProjects::getCreator, userId);
+        List<ModProjects> userProjects = modProjectsMapper.selectList(projectWrapper);
+        
+        if (!userProjects.isEmpty()) {
+            // 批量更新用户创建的项目的组织ID
+            for (ModProjects project : userProjects) {
+                project.setOrganizationId(newOrgId); // 可能为null，表示移出组织
+                modProjectsMapper.updateById(project);
+            }
+            
+            log.info("已同步更新用户 {} 创建的 {} 个项目的所属组织为: {}", 
+                    userId, userProjects.size(), newOrganizationName);
+        }
+
         log.info("用户 {} 的组织已修改为: {}", userId, newOrganizationName);
         
-        // 4. 返回成功结果，包含新的组织名称
+        // 5. 返回成功结果，包含新的组织名称和同步更新的项目数量
         Map<String, Object> resultData = new HashMap<>();
         resultData.put("newOrganization", newOrganizationName);
-        return ApiResult.success(resultData, "用户组织修改成功");
+        resultData.put("updatedProjectsCount", userProjects.size());
+        return ApiResult.success(resultData, "用户组织修改成功，已同步更新相关项目");
     }
 
 }

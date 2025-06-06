@@ -97,8 +97,12 @@ public interface IModUsersService extends IService<ModUsers> {
 
     /**
      * 管理员修改用户所属组织
+     * 功能说明：
+     * 1. 修改用户的组织关联关系
+     * 2. 自动同步更新该用户创建的所有项目的所属组织，保证数据一致性
+     * 
      * @param userOrganizationDTO 用户组织修改DTO
-     * @return 操作结果
+     * @return 操作结果，包含新组织名称和同步更新的项目数量
      */
     ApiResult<Object> changeUserOrganization(UserOrganizationDTO userOrganizationDTO);
 
