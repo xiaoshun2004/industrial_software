@@ -4,9 +4,9 @@ import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.model.dto.*;
 import com.scut.industrial_software.model.entity.ModUsers;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.scut.industrial_software.model.vo.LoginResponseVO;
 import com.scut.industrial_software.model.vo.PageVO;
 import com.scut.industrial_software.model.vo.UserInfoVO;
+import com.scut.industrial_software.model.vo.UserOrganizationVO;
 import jakarta.validation.Valid;
 
 import java.util.List;
@@ -105,5 +105,11 @@ public interface IModUsersService extends IService<ModUsers> {
      * @return 操作结果，包含新组织名称和同步更新的项目数量
      */
     ApiResult<Object> changeUserOrganization(UserOrganizationDTO userOrganizationDTO);
+
+    /**
+     * 获取当前登录用户的组织信息
+     * @return 用户组织信息，如果用户未加入组织则返回特定标识
+     */
+    UserOrganizationVO getCurrentUserOrganization();
 
 }

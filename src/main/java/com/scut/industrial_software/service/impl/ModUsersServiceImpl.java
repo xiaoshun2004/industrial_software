@@ -17,6 +17,7 @@ import com.scut.industrial_software.mapper.OrganizationMapper;
 import com.scut.industrial_software.mapper.UserOrganizationMapper;
 import com.scut.industrial_software.model.vo.PageVO;
 import com.scut.industrial_software.model.vo.UserInfoVO;
+import com.scut.industrial_software.model.vo.UserOrganizationVO;
 import com.scut.industrial_software.service.IModUsersService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.scut.industrial_software.utils.PasswordUtil;
@@ -472,6 +473,50 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
         resultData.put("newOrganization", newOrganizationName);
         resultData.put("updatedProjectsCount", userProjects.size());
         return ApiResult.success(resultData, "用户组织修改成功，已同步更新相关项目");
+    }
+
+    @Override
+    public UserOrganizationVO getCurrentUserOrganization() {
+        // 1. 从ThreadLocal中获取当前登录用户信息
+        UserDTO currentUser = UserHolder.getUser();
+        if (currentUser == null || currentUser.getId() == null) {
+            log.warn("获取用户组织信息失败：用户未登录");
+            return UserOrganizationVO.builder()
+                    .orgId(-1)
+                    .orgName("")
+                    .build();
+        }
+
+        Integer userId = currentUser.getId().intValue();
+        
+        // 2. 查询用户组织关联
+        UserOrganization userOrg = getUserOrganization(userId);
+        
+        // 3. 如果用户未加入任何组织
+        if (userOrg == null) {
+            log.info("用户 {} 未加入任何组织", userId);
+            return UserOrganizationVO.builder()
+                    .orgId(-1)
+                    .orgName("")
+                    .build();
+        }
+        
+        // 4. 查询组织信息
+        Organization organization = organizationMapper.selectById(userOrg.getOrgId());
+        if (organization == null) {
+            log.warn("用户 {} 关联的组织 {} 不存在", userId, userOrg.getOrgId());
+            return UserOrganizationVO.builder()
+                    .orgId(-1)
+                    .orgName("")
+                    .build();
+        }
+        
+        // 5. 返回用户组织信息
+        log.info("成功获取用户 {} 的组织信息：{}", userId, organization.getOrgName());
+        return UserOrganizationVO.builder()
+                .orgId(organization.getOrgId())
+                .orgName(organization.getOrgName())
+                .build();
     }
 
 }
