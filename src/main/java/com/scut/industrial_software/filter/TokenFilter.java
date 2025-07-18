@@ -55,12 +55,26 @@ public class TokenFilter implements Filter {
 
                 // 更新请求 URI
                 request = new RequestWrapper(request, newRequestURI);
+                requestURI = newRequestURI;
             }
 
-
-
-            // 2.放行注册和登录请求
-            if (requestURI.equals("/auth/verifyCode")||requestURI.equals("/modUsers/register") || requestURI.equals("/auth/jsonLogin")||requestURI.equals("/api/modUsers/register") || requestURI.equals("/api/auth/jsonLogin")|| requestURI.equals("/api/auth/verifyCode")) {
+            // 2.放行注册和登录请求，以及文件接口请求
+            if (requestURI.equals("/auth/verifyCode") || 
+                requestURI.equals("/modUsers/register") || 
+                requestURI.equals("/auth/jsonLogin") || 
+                requestURI.equals("/api/modUsers/register") || 
+                requestURI.equals("/api/auth/jsonLogin") || 
+                requestURI.equals("/api/auth/verifyCode") ||
+                requestURI.startsWith("/files/")) {  // 添加文件接口白名单
+                
+                // 如果是文件接口，设置一个默认用户，方便测试
+                if (requestURI.startsWith("/files/")) {
+                    UserDTO defaultUser = new UserDTO();
+                    defaultUser.setId(1L);  // 设置一个默认ID
+                    defaultUser.setName("测试用户");  // 设置一个默认用户名
+                    UserHolder.saveUser(defaultUser);
+                }
+                
                 log.info("放行请求: {}", requestURI);
                 filterChain.doFilter(request, response);
                 return;
