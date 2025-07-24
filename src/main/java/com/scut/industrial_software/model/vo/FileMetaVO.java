@@ -1,5 +1,6 @@
 package com.scut.industrial_software.model.vo;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -11,15 +12,11 @@ import java.time.LocalDateTime;
 @Data
 @Accessors(chain = true)
 public class FileMetaVO {
-    /**
-     * 文件唯一ID
-     */
-    private Long id;
 
     /**
      * 文件系统中的唯一标识符
      */
-    private String fileUuid;
+    private String id;
 
     /**
      * 文件名
@@ -29,35 +26,11 @@ public class FileMetaVO {
     /**
      * 文件大小 (单位: B)
      */
-    private Long fileSize;
-
-    /**
-     * 文件的MIME类型
-     */
-    private String fileType;
-
-    /**
-     * 文件描述
-     */
-    private String description;
-
-    /**
-     * 创建者用户ID
-     */
-    private Long creatorId;
-
-    /**
-     * 创建者用户名
-     */
-    private String creatorName;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createTime;
+    private String fileSize;
 
     /**
      * 最后更新时间
      */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
 } 

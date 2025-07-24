@@ -8,6 +8,11 @@ import lombok.Data;
 @Data
 public class FileQueryDTO {
     /**
+     * 文件隶属是数据表
+     */
+    private String dbType;
+
+    /**
      * 当前页码
      */
     private Integer pageNum = 1;

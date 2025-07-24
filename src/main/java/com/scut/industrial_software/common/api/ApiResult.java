@@ -122,20 +122,20 @@ public class ApiResult<T> implements Serializable {
     }
 
     /**
-     * 参数验证失败返回结果
+     * 资源不存在返回结果
      */
-    public static <T> ApiResult<T> validateFailed() {
-        return failed(ApiErrorCode.VALIDATE_FAILED);
+    public static <T> ApiResult<T> resourceNotFound() {
+        return failed(ApiErrorCode.RESOURCE_NOT_FOUND);
     }
 
     /**
-     * 参数验证失败返回结果
+     * 资源不存在返回结果
      *
      * @param message 提示信息
      */
-    public static <T> ApiResult<T> validateFailed(String message) {
-        logger.error("参数验证失败: {}", message);
-        return new ApiResult<T>(ApiErrorCode.VALIDATE_FAILED.getCode(), message, null);
+    public static <T> ApiResult<T> resourceNotFound(String message) {
+        logger.error("资源不存在: {}", message);
+        return new ApiResult<T>(ApiErrorCode.RESOURCE_NOT_FOUND.getCode(), message, null);
     }
 
     /**
@@ -153,4 +153,57 @@ public class ApiResult<T> implements Serializable {
         logger.error("未授权: {}", data);
         return new ApiResult<T>(ApiErrorCode.FORBIDDEN.getCode(), ApiErrorCode.FORBIDDEN.getMessage(), data);
     }
+
+    /**
+     * 内部服务器错误返回结果
+     */
+    public static <T> ApiResult<T> internalServerError() {
+        return failed(ApiErrorCode.INTERNAL_SERVER_ERROR);
+    }
+
+    /**
+     * 内部服务器错误返回结果
+     *
+     * @param message 提示信息
+     */
+    public static <T> ApiResult<T> internalServerError(String message) {
+        logger.error("服务器内部错误: {}", message);
+        return new ApiResult<T>(ApiErrorCode.INTERNAL_SERVER_ERROR.getCode(), message, null);
+    }
+
+    /**
+     * 文件上传失败返回结果
+     */
+    public static <T> ApiResult<T> fileUploadFailed() {
+        return failed(ApiErrorCode.FILE_UPLOAD_FAILED);
+    }
+
+    /**
+     * 文件下载失败返回结果
+     */
+    public static <T> ApiResult<T> fileDownloadFailed() {
+        return failed(ApiErrorCode.FILE_DOWNLOAD_FAILED);
+    }
+
+    /**
+     * 数据库类型无效返回结果
+     */
+    public static <T> ApiResult<T> invalidDatabaseType() {
+        return failed(ApiErrorCode.INVALID_DATABASE_TYPE);
+    }
+
+    /**
+     * 文件存储空间不足返回结果
+     */
+    public static <T> ApiResult<T> storageSpaceInsufficient() {
+        return failed(ApiErrorCode.STORAGE_SPACE_INSUFFICIENT);
+    }
+
+    /**
+     * 不支持的文件类型返回结果
+     */
+    public static <T> ApiResult<T> unsupportedFileType() {
+        return failed(ApiErrorCode.UNSUPPORTED_FILE_TYPE);
+    }
+
 }

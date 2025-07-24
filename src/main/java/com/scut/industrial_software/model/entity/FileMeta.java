@@ -83,4 +83,9 @@ public class FileMeta implements Serializable {
      * 最后更新时间
      */
     private LocalDateTime updateTime;
+
+    /**
+     * 文件隶属的数据库表
+     */
+    private String dbType;
 } 

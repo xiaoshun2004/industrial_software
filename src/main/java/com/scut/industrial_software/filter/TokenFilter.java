@@ -65,10 +65,10 @@ public class TokenFilter implements Filter {
                 requestURI.equals("/api/modUsers/register") || 
                 requestURI.equals("/api/auth/jsonLogin") || 
                 requestURI.equals("/api/auth/verifyCode") ||
-                requestURI.startsWith("/files/")) {  // 添加文件接口白名单
+                requestURI.startsWith("/dataManagement/")) {  // 添加文件接口白名单
                 
                 // 如果是文件接口，设置一个默认用户，方便测试
-                if (requestURI.startsWith("/files/")) {
+                if (requestURI.startsWith("/dataManagement/")) {
                     UserDTO defaultUser = new UserDTO();
                     defaultUser.setId(1L);  // 设置一个默认ID
                     defaultUser.setName("测试用户");  // 设置一个默认用户名

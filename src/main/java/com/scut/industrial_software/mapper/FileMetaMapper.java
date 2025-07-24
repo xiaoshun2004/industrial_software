@@ -23,7 +23,17 @@ public interface FileMetaMapper extends BaseMapper<FileMeta> {
      * @return 分页结果
      */
     IPage<FileMeta> selectPageByCreatorId(Page<FileMeta> page, @Param("creatorId") Long creatorId);
-    
+
+    /**
+     * 根据创建者ID和文件隶属数据库类型分页查询文件列表
+     *
+     * @param page 分页参数
+     * @param creatorId 创建者ID
+     * @param dbType 数据库类型
+     * @return 分页结果
+     */
+    IPage<FileMeta> selectPageByCreatorIdAndDbType(Page<FileMeta> page, @Param("creatorId") Long creatorId, @Param("dbType") String dbType);
+
     /**
      * 根据关键字分页模糊查询文件列表
      * 

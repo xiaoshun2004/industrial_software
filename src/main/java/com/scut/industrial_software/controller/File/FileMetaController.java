@@ -24,42 +24,48 @@ import java.nio.charset.StandardCharsets;
  */
 @Slf4j
 @RestController
-@RequestMapping("/files")
+@RequestMapping("/dataManagement")
 public class FileMetaController {
 
     @Autowired
     private IFileMetaService fileMetaService;
 
     /**
-     * 上传或保存文件
-     * 
-     * @param file 文件
-     * @param id 文件ID（可选，为null时表示新上传，否则表示覆盖保存）
+     * 上传并保存文件√
+     *
+     * @param dbType 文件隶属的数据库类型标识
+     * @param fileName 用户指定的文件名
+     * @param file 文件内容
      * @return 文件元数据
      */
     @PostMapping("/upload")
-    public ApiResult<FileMetaVO> uploadFile(@RequestParam("file") MultipartFile file,
-                                          @RequestParam(value = "id", required = false) Long id) {
-        log.info("上传文件: {}, id: {}", file.getOriginalFilename(), id);
-        FileMetaVO fileMetaVO = fileMetaService.uploadOrSaveFile(file, id);
+    public ApiResult<FileMetaVO> uploadFile(
+            @RequestParam("dbType") String dbType,
+            @RequestParam("fileName") String fileName,
+            @RequestParam("file") MultipartFile file) {
+        log.info("上传文件: {}, dbType: {}", file.getOriginalFilename(), dbType);
+        FileMetaVO fileMetaVO = fileMetaService.uploadFile(dbType, fileName, file);
         return ApiResult.success(fileMetaVO);
     }
 
     /**
-     * 下载文件
-     * 
-     * @param id 文件ID
+     * 下载文件√
+     *
+     * @param dbType 文件隶属的数据库类型
+     * @param field 要下载的文件ID
      * @return 文件字节流
      */
-    @GetMapping("/download/{id}")
-    public ResponseEntity<byte[]> downloadFile(@PathVariable Long id) {
-        log.info("下载文件: {}", id);
+    @GetMapping("/download")
+    public ResponseEntity<byte[]> downloadFile(
+            @RequestParam("dbType") String dbType,
+            @RequestParam("field") String field) {
+        log.info("下载文件: {}", field);
         
         // 获取文件信息
-        FileMetaVO fileInfo = fileMetaService.getFileInfo(id);
+        FileMetaVO fileInfo = fileMetaService.getFileInfo(field);
         
         // 获取文件内容
-        byte[] fileContent = fileMetaService.downloadFile(id);
+        byte[] fileContent = fileMetaService.downloadFile(field);
         
         // 设置响应头
         HttpHeaders headers = new HttpHeaders();
@@ -78,27 +84,32 @@ public class FileMetaController {
         
         // 使用RFC 5987编码，支持国际化字符
         headers.add(HttpHeaders.CONTENT_DISPOSITION, 
-                    "attachment; filename=\"" + encodedFileName + "\"; filename*=UTF-8''" + encodedFileName);
-        
+                    "attachment; filename=\"" + encodedFileName);
+
+        log.info("文件下载完成: {}", fileInfo.getFileName());
+
         return ResponseEntity.ok()
                 .headers(headers)
                 .body(fileContent);
     }
 
     /**
-     * 获取当前用户的文件列表
-     * 
+     * 获取当前用户的文件列表√
+     *
+     * @param dbType 文件隶属的数据库类型
      * @param pageNum 页码
      * @param pageSize 每页大小
      * @return 文件列表
      */
-    @GetMapping("/my/page")
+    @GetMapping("/files")
     public ApiResult<PageVO<FileMetaVO>> getMyFiles(
+            @RequestParam(value = "dbType") String dbType,
             @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
-        log.info("获取我的文件列表: pageNum={}, pageSize={}", pageNum, pageSize);
+        log.info("获取我的文件列表: dbType={}, pageNum={}, pageSize={}", dbType,pageNum, pageSize);
         
         FileQueryDTO queryDTO = new FileQueryDTO();
+        queryDTO.setDbType(dbType);
         queryDTO.setPageNum(pageNum);
         queryDTO.setPageSize(pageSize);
         
@@ -106,40 +117,43 @@ public class FileMetaController {
         return ApiResult.success(pageResult);
     }
 
-    /**
-     * 根据关键字搜索文件
-     * 
-     * @param pageNum 页码
-     * @param pageSize 每页大小
-     * @param keyword 关键字
-     * @return 文件列表
-     */
-    @GetMapping("/search/page")
-    public ApiResult<PageVO<FileMetaVO>> searchFiles(
-            @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
-            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
-            @RequestParam(value = "keyword", required = false) String keyword) {
-        log.info("搜索文件: pageNum={}, pageSize={}, keyword={}", pageNum, pageSize, keyword);
-        
-        FileQueryDTO queryDTO = new FileQueryDTO();
-        queryDTO.setPageNum(pageNum);
-        queryDTO.setPageSize(pageSize);
-        queryDTO.setKeyword(keyword);
-        
-        PageVO<FileMetaVO> pageResult = fileMetaService.searchFiles(queryDTO);
-        return ApiResult.success(pageResult);
-    }
 
-    /**
-     * 删除文件
-     * 
-     * @param id 文件ID
-     * @return 操作结果
-     */
-    @DeleteMapping("/delete/{id}")
-    public ApiResult<Object> deleteFile(@PathVariable Long id) {
-        log.info("删除文件: {}", id);
-        boolean result = fileMetaService.deleteFile(id);
-        return result ? ApiResult.success(null) : ApiResult.failed("删除失败");
-    }
+//    /**
+//     * 根据关键字搜索文件
+//     *
+//     * @param pageNum 页码
+//     * @param pageSize 每页大小
+//     * @param keyword 关键字
+//     * @return 文件列表
+//     */
+//
+//    @GetMapping("/search/page")
+//    public ApiResult<PageVO<FileMetaVO>> searchFiles(
+//            @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
+//            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
+//            @RequestParam(value = "keyword", required = false) String keyword) {
+//        log.info("搜索文件: pageNum={}, pageSize={}, keyword={}", pageNum, pageSize, keyword);
+//
+//        FileQueryDTO queryDTO = new FileQueryDTO();
+//        queryDTO.setPageNum(pageNum);
+//        queryDTO.setPageSize(pageSize);
+//        queryDTO.setKeyword(keyword);
+//
+//        PageVO<FileMetaVO> pageResult = fileMetaService.searchFiles(queryDTO);
+//        return ApiResult.success(pageResult);
+//    }
+//
+//    /**
+//     * 删除文件
+//     *
+//     * @param id 文件ID
+//     * @return 操作结果
+//     */
+//    @DeleteMapping("/delete/{id}")
+//    public ApiResult<Object> deleteFile(@PathVariable Long id) {
+//        log.info("删除文件: {}", id);
+//        boolean result = fileMetaService.deleteFile(id);
+//        return result ? ApiResult.success(null) : ApiResult.failed("删除失败");
+//    }
+
 }

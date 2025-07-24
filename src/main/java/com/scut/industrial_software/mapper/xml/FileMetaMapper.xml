@@ -16,12 +16,21 @@
         <result column="storage_location" property="storageLocation" />
         <result column="create_time" property="createTime" />
         <result column="update_time" property="updateTime" />
+        <result column="db_type" property="dbType" />
     </resultMap>
 
     <!-- 根据创建者ID分页查询文件列表 -->
     <select id="selectPageByCreatorId" resultMap="BaseResultMap">
         SELECT * FROM file_meta
         WHERE creator_id = #{creatorId}
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 根据创建者ID和文件隶属数据库类型分页查询文件列表 -->
+    <select id="selectPageByCreatorIdAndDbType" resultMap="BaseResultMap">
+        SELECT * FROM file_meta
+        WHERE creator_id = #{creatorId}
+        AND db_type = #{dbType}
         ORDER BY create_time DESC
     </select>
     
