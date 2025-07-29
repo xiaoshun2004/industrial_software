@@ -72,19 +72,20 @@ public class FileMetaController {
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
         
         // 对文件名进行URL编码，解决中文文件名问题
+        String fileName = fileInfo.getFileName();
+
+        // filename 用 ISO-8859-1 编码，避免中文乱码
+        String asciiFileName;
+        asciiFileName = new String(fileName.getBytes(StandardCharsets.UTF_8), StandardCharsets.ISO_8859_1);
+
         String encodedFileName;
-        try {
-            encodedFileName = URLEncoder.encode(fileInfo.getFileName(), StandardCharsets.UTF_8.toString());
-            // 替换空格为%20，确保兼容性
-            encodedFileName = encodedFileName.replace("+", "%20");
-        } catch (UnsupportedEncodingException e) {
-            encodedFileName = "file";
-            log.error("文件名编码失败", e);
-        }
-        
-        // 使用RFC 5987编码，支持国际化字符
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, 
-                    "attachment; filename=\"" + encodedFileName);
+        encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8);
+        // 替换加号为%20，确保兼容性
+        encodedFileName = encodedFileName.replace("+", "%20");
+
+        // 设置Content-Disposition，兼容各类浏览器
+        String contentDisposition = "attachment; filename=\"" + asciiFileName + "\"; filename*=UTF-8''" + encodedFileName;
+        headers.set(HttpHeaders.CONTENT_DISPOSITION, contentDisposition);
 
         log.info("文件下载完成: {}", fileInfo.getFileName());
 
