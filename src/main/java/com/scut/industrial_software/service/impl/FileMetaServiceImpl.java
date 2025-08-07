@@ -168,11 +168,6 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
         // 查询当前用户的文件
         IPage<FileMeta> filePage = baseMapper.selectPageByCreatorIdAndDbType(page, currentUser.getId(), queryDTO.getDbType());
 
-        // 如果没有查询到文件，返回文件不存在
-        if (filePage.getRecords().isEmpty()) {
-            throw new ApiException(ApiErrorCode.RESOURCE_NOT_FOUND);
-        }
-
         // 转换为VO
         List<FileMetaVO> records = filePage.getRecords().stream()
                 .map(fileMeta -> {
