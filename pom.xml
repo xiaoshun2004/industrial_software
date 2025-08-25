@@ -190,7 +190,8 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>com.scut.industrial_software.IndustrialSoftwareApplication</mainClass>
-                    <skip>true</skip>
+                    <!-- 打包时生成可执行的jar -->
+                    <skip>false</skip>
                 </configuration>
                 <executions>
                     <execution>

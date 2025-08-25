@@ -1,10 +1,9 @@
 package com.scut.industrial_software;
 
-
 import com.scut.industrial_software.common.api.ApiResult;
-import com.scut.industrial_software.controller.User.ModUsersController;
 import com.scut.industrial_software.model.dto.ChangePasswordDTO;
 import com.scut.industrial_software.model.dto.UserDTO;
+import com.scut.industrial_software.service.IModUsersService;
 import com.scut.industrial_software.utils.UserHolder;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +16,7 @@ import java.util.concurrent.*;
 public class PasswordChangeTest {
 
     @Autowired
-    private ModUsersController modUsersController;
+    private IModUsersService modUsersService;
 
     @Test
     public void testConcurrentPasswordChange() throws InterruptedException, ExecutionException {
@@ -30,6 +29,7 @@ public class PasswordChangeTest {
         dto2.setOldPassword("asdfgh");
         dto2.setNewPassword("123456");
 
+        // 构建线程池
         ExecutorService executor = Executors.newFixedThreadPool(2);
 
         Callable<String> task1 = () -> {
@@ -37,7 +37,7 @@ public class PasswordChangeTest {
             user.setId(1L); // 模拟当前登录用户 ID
             UserHolder.saveUser(user); // 设置当前用户上下文
 
-            ApiResult<Object> result = modUsersController.changePassword(dto1);
+            ApiResult<Object> result = this.modUsersService.changePassword(UserHolder.getUser().getId(),dto1);
 
             UserHolder.removeUser(); // 清理上下文
             return "线程1修改结果: " + result.getMessage();
@@ -48,7 +48,7 @@ public class PasswordChangeTest {
             user.setId(1L); // 同一个用户，模拟并发
             UserHolder.saveUser(user);
 
-            ApiResult<Object> result = modUsersController.changePassword(dto2);
+            ApiResult<Object> result = this.modUsersService.changePassword(UserHolder.getUser().getId(),dto2);
 
             UserHolder.removeUser();
             return "线程2修改结果: " + result.getMessage();

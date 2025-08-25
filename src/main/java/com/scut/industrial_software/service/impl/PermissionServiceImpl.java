@@ -75,7 +75,7 @@ public class PermissionServiceImpl implements IPermissionService {
             return ApiResult.failed("参数不能为空");
         }
         // 检查权限值是否合法
-        if (newPermission != PERMISSION_USER && newPermission != PERMISSION_ADMIN) {
+        if (!newPermission.equals(PERMISSION_USER) && !newPermission.equals(PERMISSION_ADMIN)) {
             return ApiResult.failed(PermissionConstants.MSG_INVALID_PERMISSION_VALUE);
         }
         

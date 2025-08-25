@@ -13,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
@@ -119,42 +118,45 @@ public class FileMetaController {
     }
 
 
-//    /**
-//     * 根据关键字搜索文件
-//     *
-//     * @param pageNum 页码
-//     * @param pageSize 每页大小
-//     * @param keyword 关键字
-//     * @return 文件列表
-//     */
-//
-//    @GetMapping("/search/page")
-//    public ApiResult<PageVO<FileMetaVO>> searchFiles(
-//            @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
-//            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
-//            @RequestParam(value = "keyword", required = false) String keyword) {
-//        log.info("搜索文件: pageNum={}, pageSize={}, keyword={}", pageNum, pageSize, keyword);
-//
-//        FileQueryDTO queryDTO = new FileQueryDTO();
-//        queryDTO.setPageNum(pageNum);
-//        queryDTO.setPageSize(pageSize);
-//        queryDTO.setKeyword(keyword);
-//
-//        PageVO<FileMetaVO> pageResult = fileMetaService.searchFiles(queryDTO);
-//        return ApiResult.success(pageResult);
-//    }
-//
-//    /**
-//     * 删除文件
-//     *
-//     * @param id 文件ID
-//     * @return 操作结果
-//     */
-//    @DeleteMapping("/delete/{id}")
-//    public ApiResult<Object> deleteFile(@PathVariable Long id) {
-//        log.info("删除文件: {}", id);
-//        boolean result = fileMetaService.deleteFile(id);
-//        return result ? ApiResult.success(null) : ApiResult.failed("删除失败");
-//    }
+    /**
+     * 根据关键字搜索文件
+     *
+     * @param pageNum 页码
+     * @param pageSize 每页大小
+     * @param keyword 关键字
+     * @return 文件列表
+     */
+    /*
+    @GetMapping("/search/page")
+    public ApiResult<PageVO<FileMetaVO>> searchFiles(
+            @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
+            @RequestParam(value = "keyword", required = false) String keyword) {
+        log.info("搜索文件: pageNum={}, pageSize={}, keyword={}", pageNum, pageSize, keyword);
+
+        FileQueryDTO queryDTO = new FileQueryDTO();
+        queryDTO.setPageNum(pageNum);
+        queryDTO.setPageSize(pageSize);
+        queryDTO.setKeyword(keyword);
+
+        PageVO<FileMetaVO> pageResult = fileMetaService.searchFiles(queryDTO);
+        return ApiResult.success(pageResult);
+    }
+    */
+
+    /**
+     * 删除文件
+     *
+     * @param id 文件ID
+     * @return 操作结果
+     */
+    /*
+    @DeleteMapping("/delete/{id}")
+    public ApiResult<Object> deleteFile(@PathVariable Long id) {
+        log.info("删除文件: {}", id);
+        boolean result = fileMetaService.deleteFile(id);
+        return result ? ApiResult.success(null) : ApiResult.failed("删除失败");
+    }
+    */
 
 }
