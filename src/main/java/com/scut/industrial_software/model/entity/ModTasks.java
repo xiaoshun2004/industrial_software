@@ -8,6 +8,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -64,4 +66,9 @@ public class ModTasks implements Serializable {
      * 任务状态（未启动、仿真中、暂停中）
      */
     private String status;
+
+    /**
+     * 计算类型（GPU等）（可选）
+     */
+    private String computeResource;
 }

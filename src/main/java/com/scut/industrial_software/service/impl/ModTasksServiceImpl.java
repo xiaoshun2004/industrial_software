@@ -123,10 +123,21 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         task.setSimulationStage(createDTO.getSimulationStage());
         task.setType(createDTO.getType());
         task.setStatus("未启动"); // 默认状态为未启动
-        
-        boolean result = this.save(task);
-        if (result) {
-            return ApiResult.success(null, "创建成功");
+        task.setComputeResource(createDTO.getComputeResource());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("taskid",task.getTaskId());
+        result.put("task_name",createDTO.getTaskName());
+        result.put("creator",createDTO.getCreator());
+        result.put("simulationStage",createDTO.getSimulationStage());
+        result.put("type",createDTO.getType());
+        result.put("computeResource",createDTO.getComputeResource());
+        result.put("create_time",task.getCreationTime());
+        result.put("status",task.getStatus());
+
+        boolean IsSave = this.save(task);
+        if (IsSave) {
+            return ApiResult.success(result, "创建成功");
         } else {
             return ApiResult.failed("创建失败");
         }
@@ -161,10 +172,21 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         task.setSimulationStage(createDTO.getSimulationStage());
         task.setType(createDTO.getType());
         task.setStatus("未启动"); // 默认状态为未启动
+        task.setComputeResource(createDTO.getComputeResource());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("taskid",task.getTaskId());
+        result.put("task_name",createDTO.getTaskName());
+        result.put("creator",createDTO.getCreator());
+        result.put("simulationStage",createDTO.getSimulationStage());
+        result.put("type",createDTO.getType());
+        result.put("computeResource",createDTO.getComputeResource());
+        result.put("create_time",task.getCreationTime());
+        result.put("status",task.getStatus());
         
-        boolean result = this.save(task);
-        if (result) {
-            return ApiResult.success(null, "创建成功");
+        boolean IsSave = this.save(task);
+        if (IsSave) {
+            return ApiResult.success(result, "创建成功");
         } else {
             return ApiResult.failed("创建失败");
         }

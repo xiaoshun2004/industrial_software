@@ -27,4 +27,9 @@ public class TaskCreateDTO {
      * 创建者
      */
     private String creator;
+
+    /**
+     * 计算资源（可选）
+     */
+    private String computeResource;
 } 

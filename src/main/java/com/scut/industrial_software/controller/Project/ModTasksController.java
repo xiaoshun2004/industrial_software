@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
  * @since 2025-05-28
  */
 @RestController
-@RequestMapping("/modTasks")
+@RequestMapping("/projectManagement/")
 public class ModTasksController {
     
     @Autowired
@@ -25,25 +25,25 @@ public class ModTasksController {
     /**
      * 获取共享任务分页列表
      */
-    @PostMapping("/shared/{projectId}/page")
+    @GetMapping("/shared/taskManagement/tasks/{projectId}")
     public ApiResult<?> getSharedTasksPage(@PathVariable Integer projectId,
-                                         @RequestBody PageRequestDTO requestDTO) {
+                                           PageRequestDTO requestDTO) {
         return modTasksService.getSharedTasksPage(projectId, requestDTO);
     }
     
     /**
      * 获取私人任务分页列表
      */
-    @PostMapping("/private/{projectId}/page")
+    @GetMapping("/private/taskManagement/tasks/{projectId}")
     public ApiResult<?> getPrivateTasksPage(@PathVariable Integer projectId,
-                                          @RequestBody PageRequestDTO requestDTO) {
+                                            PageRequestDTO requestDTO) {
         return modTasksService.getPrivateTasksPage(projectId, requestDTO);
     }
     
     /**
      * 创建新共享任务
      */
-    @PostMapping("/shared/{projectId}/create")
+    @PostMapping("/shared/taskManagement/tasks/{projectId}")
     public ApiResult<?> createSharedTask(@PathVariable Integer projectId,
                                        @RequestBody TaskCreateDTO createDTO) {
         return modTasksService.createSharedTask(projectId, createDTO);
@@ -52,7 +52,7 @@ public class ModTasksController {
     /**
      * 创建新私人任务
      */
-    @PostMapping("/private/{projectId}/create")
+    @PostMapping("/private/taskManagement/tasks/{projectId}")
     public ApiResult<?> createPrivateTask(@PathVariable Integer projectId,
                                         @RequestBody TaskCreateDTO createDTO) {
         return modTasksService.createPrivateTask(projectId, createDTO);
