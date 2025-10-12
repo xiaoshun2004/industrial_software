@@ -14,6 +14,7 @@ import com.scut.industrial_software.service.IModProjectsService;
 import com.scut.industrial_software.service.IModTasksService;
 import com.scut.industrial_software.service.IModUsersService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.scut.industrial_software.service.IMonitorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -41,10 +42,13 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
     @Autowired
     private IModUsersService modUsersService;
 
+    @Autowired
+    private IMonitorService monitorService;
+
     private static final List<String> STAGE_TYPES = Arrays.asList("前处理", "后处理", "求解器");
     private static final List<String> PREPROCESSING_SOLVER_TYPES = Arrays.asList("多体", "结构", "冲击");
     private static final List<String> POSTPROCESSING_TYPES = Arrays.asList("通用后处理");
-    private static final List<String> STATUS_TYPES = Arrays.asList("未启动", "仿真中", "暂停中");
+    private static final List<String> STATUS_TYPES = Arrays.asList("未启动", "仿真中", "已结束");
 
     @Override
     public ApiResult<?> getSharedTasksPage(Integer projectId, PageRequestDTO requestDTO) {
@@ -193,7 +197,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
     }
 
     @Override
-    public ApiResult<?> deleteTask(Integer taskId) {
+    public ApiResult<?> deleteTask(String taskId) {
         ModTasks task = this.getById(taskId);
         if (task == null) {
             return ApiResult.failed("任务不存在");
@@ -214,7 +218,23 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
             return ApiResult.failed("删除失败");
         }
     }
-    
+
+
+    @Override
+    public ApiResult<?> startTask(String taskId) {
+        return monitorService.startProgram(taskId);
+    }
+
+    @Override
+    public ApiResult<?> getTaskStatus(String taskId) {
+        return monitorService.getProgramStatus(taskId);
+    }
+
+    @Override
+    public ApiResult<?> stopTask(String taskId) {
+        return monitorService.stopProgram(taskId);
+    }
+
     /**
      * 通过用户名查询用户ID
      * 

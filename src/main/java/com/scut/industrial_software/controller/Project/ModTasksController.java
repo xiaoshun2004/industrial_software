@@ -16,53 +16,68 @@ import org.springframework.web.bind.annotation.*;
  * @since 2025-05-28
  */
 @RestController
-@RequestMapping("/projectManagement/")
+@RequestMapping("/projectManagement/{accessType}/taskManagement")
 public class ModTasksController {
     
     @Autowired
     private IModTasksService modTasksService;
-    
+
     /**
-     * 获取共享任务分页列表
+     * 获取任务分页列表
      */
-    @GetMapping("/shared/taskManagement/tasks/{projectId}")
-    public ApiResult<?> getSharedTasksPage(@PathVariable Integer projectId,
-                                           PageRequestDTO requestDTO) {
-        return modTasksService.getSharedTasksPage(projectId, requestDTO);
+    @GetMapping("/tasks/{projectId}")
+    public ApiResult<?> getTasksPage(@PathVariable String accessType,
+                                     @PathVariable Integer projectId,
+                                     PageRequestDTO requestDTO) {
+        return "shared".equals(accessType) ?
+                modTasksService.getSharedTasksPage(projectId, requestDTO) :
+                modTasksService.getPrivateTasksPage(projectId, requestDTO);
     }
-    
+
     /**
-     * 获取私人任务分页列表
+     * 创建新任务
      */
-    @GetMapping("/private/taskManagement/tasks/{projectId}")
-    public ApiResult<?> getPrivateTasksPage(@PathVariable Integer projectId,
-                                            PageRequestDTO requestDTO) {
-        return modTasksService.getPrivateTasksPage(projectId, requestDTO);
+    @PostMapping("/tasks/{projectId}")
+    public ApiResult<?> createTask(@PathVariable String accessType,
+                                   @PathVariable Integer projectId,
+                                   @RequestBody TaskCreateDTO createDTO) {
+        return "shared".equals(accessType) ?
+                modTasksService.createSharedTask(projectId, createDTO) :
+                modTasksService.createPrivateTask(projectId, createDTO);
     }
-    
-    /**
-     * 创建新共享任务
-     */
-    @PostMapping("/shared/taskManagement/tasks/{projectId}")
-    public ApiResult<?> createSharedTask(@PathVariable Integer projectId,
-                                       @RequestBody TaskCreateDTO createDTO) {
-        return modTasksService.createSharedTask(projectId, createDTO);
-    }
-    
-    /**
-     * 创建新私人任务
-     */
-    @PostMapping("/private/taskManagement/tasks/{projectId}")
-    public ApiResult<?> createPrivateTask(@PathVariable Integer projectId,
-                                        @RequestBody TaskCreateDTO createDTO) {
-        return modTasksService.createPrivateTask(projectId, createDTO);
-    }
-    
+
+    // 以下方法不需要区分访问类型，保持原样
     /**
      * 删除任务
      */
-    @DeleteMapping("/delete/{taskId}")
-    public ApiResult<?> deleteTask(@PathVariable Integer taskId) {
+    @DeleteMapping("/tasks/{taskId}")
+    public ApiResult<?> deleteTask(@PathVariable String taskId) {
         return modTasksService.deleteTask(taskId);
     }
+
+    /**
+     * 开始任务
+     */
+    @PostMapping("/tasks/{taskId}/start")
+    public ApiResult<?> startTask(@PathVariable String taskId) {
+        return modTasksService.startTask(taskId);
+    }
+
+    /**
+     * 查询任务状态，专门为监控任务轮询设置的获取状态接口
+     */
+    @GetMapping("/tasks/{taskId}/status")
+    public ApiResult<?> getTaskStatus(@PathVariable String taskId) {
+        return modTasksService.getTaskStatus(taskId);
+    }
+
+    /**
+     * 停止任务
+     */
+    @PostMapping("/tasks/{taskId}/stop")
+    public ApiResult<?> stopTask(@PathVariable String taskId) {
+        return modTasksService.stopTask(taskId);
+    }
+
+
 }

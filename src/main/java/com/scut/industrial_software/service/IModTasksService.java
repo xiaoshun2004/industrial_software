@@ -58,5 +58,11 @@ public interface IModTasksService extends IService<ModTasks> {
      * @param taskId 任务ID
      * @return 操作结果
      */
-    ApiResult<?> deleteTask(Integer taskId);
+    ApiResult<?> deleteTask(String taskId);
+
+    ApiResult<?> startTask(String taskId);
+
+    ApiResult<?> getTaskStatus(String taskId);
+
+    ApiResult<?> stopTask(String taskId);
 }

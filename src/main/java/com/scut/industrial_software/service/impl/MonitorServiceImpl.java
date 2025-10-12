@@ -1,6 +1,7 @@
 package com.scut.industrial_software.service.impl;
 
 import com.scut.industrial_software.common.api.ApiResult;
+import com.scut.industrial_software.model.dto.ProcessInfoDTO;
 import com.scut.industrial_software.model.vo.MonitorVO;
 import com.scut.industrial_software.service.IMonitorService;
 import org.hyperic.sigar.ProcCpu;
@@ -9,6 +10,8 @@ import org.hyperic.sigar.Sigar;
 import org.hyperic.sigar.SigarException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -16,56 +19,178 @@ import oshi.SystemInfo;
 import oshi.software.os.OSProcess;
 import oshi.software.os.OperatingSystem;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Map;
+import java.util.concurrent.*;
 
 @Service
 public class MonitorServiceImpl implements IMonitorService {
 
     // 使用Sigar获取系统信息
-    private final String programPath = "D:/exe/GETexe4/dist/main.exe";
+    private final String programPath = "D:/exe/GETexe4/dist/main/main.exe";
     private static final Logger logger = LoggerFactory.getLogger(MonitorServiceImpl.class);
-    private Process process;
-    private Long currentPid;
-    private volatile boolean isMonitoring = false;                // volatile确保线程间可见性
-    private List<MonitorVO> monitoringData = new CopyOnWriteArrayList<>();        // CopyOnWriteArrayList通过写时复制实现线程安全
+
+    @Autowired
+    @Qualifier("taskExecutor")
+    private Executor taskExecutor;
+
+    // 使用ConcurrentHashMap存储进程信息，支持多线程访问
+    private final Map<String, ProcessInfoDTO> processMap = new ConcurrentHashMap<>();
+    // private final List<MonitorVO> monitoringData = new CopyOnWriteArrayList<>();        // CopyOnWriteArrayList通过写时复制实现线程安全
 
     @Override
-    @Async("taskExecutor")
-    public CompletableFuture<String> startProgram() {
+    public ApiResult<MonitorVO> startProgram(String taskId) {
         try{
             // 清空之前的监控数据
-            monitoringData.clear();
+            // monitoringData.clear();
 
-            ProcessBuilder pb = new ProcessBuilder(programPath);
-            process = pb.start();
+            // 检查程序路径是否存在
+            File file = new File(programPath);
+            if (!file.exists()) {
+                logger.error("程序路径不正确: {}", programPath);
+                return ApiResult.failed("程序路径不正确: " + programPath);
+            }
 
-            // 获取进程ID
-            currentPid = process.pid();
+            // 启动exe程序
+            CompletableFuture<String> future = launchExe(taskId,programPath);
 
-            // 启动监控
-            isMonitoring = true;
-            logger.info("程序已启动: 进程ID=" + currentPid);
+            // 等待进程启动完成（最多等待5秒）
+            String result = future.get(5, TimeUnit.SECONDS);
 
-            // 等待程序执行完成
-            int exitCode = process.waitFor();
+            MonitorVO data = new MonitorVO(taskId,"仿真中");
 
-            // 程序执行完毕后停止监控
-            isMonitoring = false;
-            return CompletableFuture.completedFuture("执行成功: 进程ID=" + currentPid + ", 退出状态=" + exitCode);
+            return ApiResult.success(data);
 
-        }catch(IOException|InterruptedException e){
-            isMonitoring = false;
-            logger.error("程序执行失败: " + e.getMessage());
-            return CompletableFuture.completedFuture("程序执行失败: " + e.getMessage());
+        } catch (TimeoutException e){
+            logger.error("程序启动超时: {}", e.getMessage());
+            return ApiResult.failed("程序启动超时: " + e.getMessage());
+        } catch(Exception e){
+            logger.error("程序启动失败: {}", e.getMessage());
+            return ApiResult.failed("程序调用失败: " + e.getMessage());
         }
     }
 
+    /**
+     * 使用自定义线程池启动外部程序
+     */
+    public CompletableFuture<String> launchExe(String taskId, String programPath){
+        return CompletableFuture.supplyAsync(() -> {
+            try{
+                ProcessBuilder pb = new ProcessBuilder(programPath);
+                Process process = pb.start();
+
+                Long pid = process.pid();
+
+                // 双重验证进程是否仍在运行
+                if (!process.isAlive()){
+                    logger.error("程序启动后立即退出，可能启动失败");
+                    return "程序启动后立即退出，可能启动失败";
+                }
+
+                // 存储进程信息
+                ProcessInfoDTO processInfo = new ProcessInfoDTO(process, pid, LocalDateTime.now());
+
+                processMap.put(taskId, processInfo);
+
+                logger.info("程序{}已启动，PID={}", programPath, pid);
+
+                // 使用自定义线程池监控进程执行
+                monitorProcessCompletion(process, taskId);
+
+                return "程序已启动，PID=" + pid;
+
+            }catch(IOException e){
+                logger.error("启动程序失败: {}", e.getMessage());
+                return "启动程序失败: " + e.getMessage();
+            }
+        }, taskExecutor);
+    }
+
+    /**
+     * 监控进程执行完成
+     */
+    private void monitorProcessCompletion(Process process, String taskId){
+        CompletableFuture.runAsync(() -> {
+            try {
+                int exitCode = process.waitFor();
+                ProcessInfoDTO processInfo = processMap.get(taskId);
+                // 如果退出码为1，则认为程序是被中断的，由于在stopProgram中已经设置状态为interrupted，并且是原子性的，所以不会执行这里的completed逻辑
+                if (processInfo != null && processInfo.updateStatus("running", "completed")) {
+                    processInfo.setEndTime(LocalDateTime.now());
+                    processInfo.setExitCode(exitCode);
+                    processInfo.setStatus("completed");
+                    logger.info("进程执行完成，PID: {}, 退出码: {}", processInfo.getPid(), exitCode);
+                }
+                // 处理已经被中断的进程信息
+                if (processInfo != null && processInfo.getStatus().equals("interrupted")) {
+                    logger.info("进程已被中断，PID: {}", processInfo.getPid());
+                }
+                // TODO:可以在这里添加执行完成后的回调逻辑
+
+            } catch (InterruptedException e) {
+                logger.warn("进程监控被中断，PID: {}", process.pid());
+                Thread.currentThread().interrupt();
+            } finally {
+                // 清理资源
+                if (process != null) {
+                    process.destroy();
+                }
+            }
+        }, taskExecutor);
+    }
+
+    @Override
+    public ApiResult<MonitorVO> stopProgram(String taskId) {
+        try{
+            ProcessInfoDTO processInfo = processMap.get(taskId);
+            if (processInfo == null){
+                return ApiResult.failed("进程不存在");
+            }
+            // 因为前端轮询存在延迟，可能进程已经结束，这里需要检查进程状态
+            if (processInfo.getStatus().equals("completed") || processInfo.getStatus().equals("interrupted")){
+                return ApiResult.success(new MonitorVO(taskId,"已结束"));
+            }
+            Process process = processInfo.getProcess();
+            if (process.isAlive()){
+                if (processInfo.updateStatus("running", "interrupted")){
+                    process.destroy();
+                    processInfo.setEndTime(LocalDateTime.now());
+                    logger.info("进程已终止，PID={}", processInfo.getPid());
+                    return ApiResult.success(new MonitorVO(taskId,"已结束"));
+                }else{
+                    return ApiResult.success(new MonitorVO(taskId,"已结束"));
+                }
+            } else {
+                return ApiResult.success(new MonitorVO(taskId,"已结束"));
+            }
+        } catch (Exception e) {
+            logger.error("中断进程失败, 错误: {}", e.getMessage());
+            return ApiResult.failed("中断进程失败: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public ApiResult<MonitorVO> getProgramStatus(String taskId) {
+        ProcessInfoDTO processInfo = processMap.get(taskId);
+        if (processInfo == null){
+            return ApiResult.failed("进程不存在");
+        }
+
+        String status = processInfo.getStatus();
+
+        if (status.equals("running")){
+            return ApiResult.success(new MonitorVO(taskId,"仿真中"));
+        }
+
+        return ApiResult.success(new MonitorVO(taskId,"已结束"));      // status: running, interrupted, completed
+    }
+
     // 每2秒执行一次监控
+    /*
     @Scheduled(fixedRate = 2000)
     public void scheduledMonitor(){
         if (isMonitoring && currentPid != null){
@@ -82,32 +207,26 @@ public class MonitorServiceImpl implements IMonitorService {
             }
         }
     }
+    */
 
-    @Override
+    /*@Override
     public MonitorVO monitorProgram(Long pid) {
         // 使用OSHI监控库获取系统信息
         try {
             // 获取进程信息
-            /*Sigar sigar = new Sigar();
-            ProcCpu procCpu = sigar.getProcCpu(pid);
-            ProcMem procMem = sigar.getProcMem(pid);
-            */
             SystemInfo systemInfo = new SystemInfo();
             OperatingSystem os = systemInfo.getOperatingSystem();
 
             // 获取进程信息
             OSProcess process = os.getProcess(pid.intValue());
             if (process == null) {
-                isMonitoring = false;
                 logger.warn("进程{}不存在，停止监控", pid);
                 return null;
             }
             // 封装返回结果
             MonitorVO monitorVO = new MonitorVO();
             monitorVO.setPid(pid);
-            //monitorVO.setCpuUsage(procCpu.getPercent());             // 单位：%
             monitorVO.setCpuUsage(process.getProcessCpuLoadCumulative());   // 单位：%
-            //monitorVO.setMemUsage(procMem.getResident()/1024.0/1024.0);     // 单位：MB
             monitorVO.setMemUsage(process.getResidentSetSize() / 1024.0 / 1024.0);   // 获取主流集大小，单位：MB
             monitorVO.setTimestamp(LocalDateTime.now());
 
@@ -118,7 +237,7 @@ public class MonitorServiceImpl implements IMonitorService {
             logger.error("监控进程{}失败: {}", pid, e.getMessage());
             return null;
         }
-    }
+    }*/
 
     // 辅助方法：获取进程PID (JDK 8兼容)
     /*

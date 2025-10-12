@@ -66,9 +66,10 @@ public class TokenFilter implements Filter {
                 requestURI.equals("/api/auth/jsonLogin") || 
                 requestURI.equals("/api/auth/verifyCode") ||
                 requestURI.startsWith("/dataManagement/") ||
-                requestURI.startsWith("/taskMonitor/")){  // 添加文件接口白名单
+                requestURI.startsWith("/taskMonitor/") ||
+                requestURI.startsWith("/projectManagement/")){  // 添加文件接口白名单
                 
-                // 如果是文件接口，设置一个默认用户，方便测试
+                // 如果是文件接口，设置一个默认用户，方便测试（实际过程中必须直接从threadLocal中获取）
                 if (requestURI.startsWith("/dataManagement/")) {
                     UserDTO defaultUser = new UserDTO();
                     defaultUser.setId(1L);  // 设置一个默认ID
@@ -137,8 +138,6 @@ public class TokenFilter implements Filter {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
-
-
 
             //6. 校验通过, 放行
             log.info("令牌合法, 放行");

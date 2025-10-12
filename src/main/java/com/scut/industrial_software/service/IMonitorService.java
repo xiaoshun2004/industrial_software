@@ -15,9 +15,13 @@ import java.util.concurrent.CompletableFuture;
  */
 public interface IMonitorService {
 
-    CompletableFuture<String> startProgram();
+    ApiResult<MonitorVO> startProgram(String taskId);
 
-    MonitorVO monitorProgram(Long pid);
+    // MonitorVO monitorProgram(Long pid);
 
-    void scheduledMonitor();
+    // void scheduledMonitor();
+
+    ApiResult<MonitorVO> stopProgram(String taskId);
+
+    ApiResult<MonitorVO> getProgramStatus(String taskId);
 }
