@@ -8,6 +8,9 @@ import com.scut.industrial_software.model.vo.FileMetaVO;
 import com.scut.industrial_software.model.vo.PageVO;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.Part;
+import java.io.InputStream;
+
 /**
  * <p>
  * 文件元数据表 服务类
@@ -24,6 +27,16 @@ public interface IFileMetaService extends IService<FileMeta> {
      * @return 文件元数据
      */
     FileMetaVO uploadFile(String dbType, String fileName, MultipartFile file);
+
+    /**
+     * 流式上传文件
+     *
+     * @param dbType 文件隶属的数据库类型
+     * @param file  文件
+     * @param fileName  用户指定的文件名
+     * @return 文件元数据
+     */
+    FileMetaVO uploadFileStream(String dbType, String fileName, MultipartFile file);
 
     /**
      * 下载文件
@@ -63,5 +76,5 @@ public interface IFileMetaService extends IService<FileMeta> {
      * @param id 文件ID
      * @return 是否成功
      */
-    //boolean deleteFile(Long id);
+    boolean deleteFile(String id);
 } 

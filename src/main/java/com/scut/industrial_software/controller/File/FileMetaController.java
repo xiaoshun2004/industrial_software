@@ -1,5 +1,6 @@
 package com.scut.industrial_software.controller.File;
 
+import com.baomidou.mybatisplus.annotation.DbType;
 import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.model.dto.FileQueryDTO;
 import com.scut.industrial_software.model.vo.FileMetaVO;
@@ -12,7 +13,11 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
+import org.springframework.web.multipart.support.StandardMultipartHttpServletRequest;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.Part;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
@@ -45,6 +50,42 @@ public class FileMetaController {
         log.info("上传文件: {}, dbType: {}", file.getOriginalFilename(), dbType);
         FileMetaVO fileMetaVO = fileMetaService.uploadFile(dbType, fileName, file);
         return ApiResult.success(fileMetaVO);
+    }
+
+    /**
+     * 流式上传文件
+     *
+     * @param dbType    文件隶属的数据库类型标识
+     * @param fileName  用户指定的文件名
+     * @return 文件元数据
+     */
+    @PostMapping("/upload/stream")
+    public ApiResult<FileMetaVO> uploadFileStream(
+            @RequestParam("dbType") String dbType,
+            @RequestParam("fileName") String fileName,
+            MultipartHttpServletRequest request){
+        try {
+            // 获取文件部分
+            // 检查请求是否为 multipart 请求
+            if (!(request instanceof StandardMultipartHttpServletRequest)) {
+                return ApiResult.failed("请求不是 multipart 类型");
+            }
+
+            // 转换为 Spring 的 MultipartHttpServletRequest
+            MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
+
+            // 获取文件部分（使用 Spring 的方式）
+            MultipartFile multipartFile = multipartRequest.getFile("file");
+            if (multipartFile == null || multipartFile.isEmpty()) {
+                return ApiResult.failed("未提供上传文件");
+            }
+            FileMetaVO fileMetaVO = fileMetaService.uploadFileStream(dbType, fileName, multipartFile);
+            return ApiResult.success(fileMetaVO);
+        } catch (Exception e) {
+            // 异常处理
+            log.info("22");
+            return ApiResult.fileUploadFailed();
+        }
     }
 
     /**
@@ -147,16 +188,17 @@ public class FileMetaController {
     /**
      * 删除文件
      *
-     * @param id 文件ID
+     * @param dbType 数据库类型
+     * @param fileId 文件Id
      * @return 操作结果
      */
-    /*
-    @DeleteMapping("/delete/{id}")
-    public ApiResult<Object> deleteFile(@PathVariable Long id) {
-        log.info("删除文件: {}", id);
-        boolean result = fileMetaService.deleteFile(id);
-        return result ? ApiResult.success(null) : ApiResult.failed("删除失败");
+    @DeleteMapping("/files")
+    public ApiResult<Object> deleteFile(@RequestParam DbType dbType,
+                                        @RequestParam String fileId) {
+        log.info("删除文件类型: {}, 删除文件Id:{}", dbType, fileId);
+        boolean result = fileMetaService.deleteFile(fileId);
+        return ApiResult.success();
     }
-    */
+
 
 }

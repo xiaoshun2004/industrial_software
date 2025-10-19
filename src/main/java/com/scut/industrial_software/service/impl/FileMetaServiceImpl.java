@@ -25,8 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
+import javax.servlet.http.Part;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -118,6 +118,89 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public FileMetaVO uploadFileStream(String dbType, String fileName, MultipartFile file) {
+        // 如果文件为空的情况
+        if (file == null || file.getSize() == 0) {
+            throw new ApiException("文件不能为空");
+        }
+        log.info("1");
+        // dbType参数不为指定的值
+        if (Constant.dbTypes.stream().noneMatch(dbType::equals)) {
+            throw new ApiException(ApiErrorCode.INVALID_DATABASE_TYPE);
+        }
+
+        // 如果文件的类型不支持，返回错误
+        // 这里可以添加文件类型验证逻辑
+
+        try {
+            // 确保上传目录存在
+            File uploadDir = new File(uploadPath);
+            if (!uploadDir.exists()) {
+                uploadDir.mkdirs();
+            }
+
+
+            // 获取当前登录用户
+            UserDTO currentUser = UserHolder.getUser();
+            Long userId = currentUser != null ? currentUser.getId() : null;
+            String username = currentUser != null ? currentUser.getName() : "unknown";
+
+            // 生成文件UUID和保存路径
+            String originalFilename = file.getOriginalFilename();
+            String fileExtension = StringUtils.getFilenameExtension(originalFilename);
+            String fileUuid = UUID.randomUUID().toString().replace("-", "");
+            String storedFilename = fileUuid + (fileExtension != null ? "." + fileExtension : "");
+            String filePath = uploadPath + File.separator + storedFilename;
+
+            FileMeta fileMeta;
+
+            // 创建新文件记录
+            fileMeta = new FileMeta();
+            fileMeta.setFileUuid(fileUuid)
+                    .setFileName(fileName + (fileExtension != null ? "." + fileExtension : ""))
+                    .setFilePath(filePath)
+                    .setFileSize(file.getSize())
+                    .setFileType(file.getContentType())
+                    .setCreatorId(userId)
+                    .setCreatorName(username)
+                    .setStorageLocation("LOCAL_DISK")
+                    .setCreateTime(LocalDateTime.now())
+                    .setUpdateTime(LocalDateTime.now())
+                    .setDbType(dbType);
+
+            // 流式保存文件到磁盘
+            InputStream inputStream = file.getInputStream();
+                 FileOutputStream outputStream = new FileOutputStream(filePath);
+
+                byte[] buffer = new byte[8192]; // 8KB缓冲区
+                int bytesRead;
+                long totalBytesRead = 0;
+
+            // 流式读取和写入
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+                totalBytesRead += bytesRead;
+            }
+
+                // 保存或更新数据库记录
+                saveOrUpdate(fileMeta);
+
+                // 转换为VO并返回
+                FileMetaVO fileMetaVO = new FileMetaVO();
+                fileMetaVO.setId(fileMeta.getFileUuid());
+                fileMetaVO.setFileName(fileMeta.getFileName());
+                fileMetaVO.setFileSize(TransFileSizeUtil.transFileSize(fileMeta.getFileSize()));
+                fileMetaVO.setUpdateTime(fileMeta.getUpdateTime());
+                return fileMetaVO;
+        } catch (IOException e) {
+            log.error("文件上传失败", e);
+            throw new ApiException(ApiErrorCode.FILE_UPLOAD_FAILED);
+        }
+    }
+
+
+    @Override
     //下载文件（使用）
     public byte[] downloadFile(String field) {
         FileMeta fileMeta = baseMapper.selectOne(new LambdaQueryWrapper<FileMeta>().eq(FileMeta::getFileUuid, field));
@@ -205,29 +288,38 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
         // 构建分页结果
         return PageVO.build(records, filePage.getTotal(), queryDTO.getPageNum(), queryDTO.getPageSize());
     }
-
+    */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean deleteFile(Long id) {
+    public boolean deleteFile(String id) {
         FileMeta fileMeta = getById(id);
         if (fileMeta == null) {
-            throw new ApiException("文件不存在");
+            throw new ApiException(ApiErrorCode.RESOURCE_NOT_FOUND);
         }
 
         // 获取当前登录用户
         UserDTO currentUser = UserHolder.getUser();
         if (currentUser != null && !currentUser.getId().equals(fileMeta.getCreatorId())) {
-            throw new ApiException("您没有权限删除此文件");
+            throw new ApiException(ApiErrorCode.FORBIDDEN);
+        }
+
+        //删除数据库记录
+        boolean IsRemove = removeById(id);
+        if(!IsRemove){
+            throw new ApiException("数据库记录删除失败");
         }
 
         // 删除物理文件
         File file = new File(fileMeta.getFilePath());
         if (file.exists()) {
-            file.delete();
+            boolean deleted = file.delete();
+            if(!deleted){
+                throw new ApiException("物理文件删除失败");
+            }
         }
 
         // 删除数据库记录
-        return removeById(id);
+        return IsRemove;
     }
-    */
+
 } 

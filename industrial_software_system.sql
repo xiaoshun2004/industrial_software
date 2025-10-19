@@ -246,6 +246,7 @@ CREATE TABLE `mod_tasks`  (
   `simulation_stage` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '仿真阶段（前处理、后处理、求解器）',
   `type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '任务类型（多体、结构、冲击、通用后处理）',
   `status` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT '未启动' COMMENT '任务状态（未启动、仿真中、暂停中）',
+  `compute_resource` varchar(50) CHARACTER SET utf8bm4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '计算类型（GPU等）',
   PRIMARY KEY (`task_id`) USING BTREE,
   INDEX `project_id`(`project_id` ASC) USING BTREE,
   INDEX `creator`(`creator` ASC) USING BTREE,

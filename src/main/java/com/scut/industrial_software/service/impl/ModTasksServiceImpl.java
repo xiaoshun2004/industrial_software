@@ -10,6 +10,7 @@ import com.scut.industrial_software.model.entity.ModProjects;
 import com.scut.industrial_software.model.entity.ModTasks;
 import com.scut.industrial_software.model.entity.ModUsers;
 import com.scut.industrial_software.mapper.ModTasksMapper;
+import com.scut.industrial_software.model.vo.ModTasksVO;
 import com.scut.industrial_software.service.IModProjectsService;
 import com.scut.industrial_software.service.IModTasksService;
 import com.scut.industrial_software.service.IModUsersService;
@@ -24,6 +25,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -64,9 +66,11 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         
         Page<ModTasks> page = new Page<>(requestDTO.getPageNum(), requestDTO.getPageSize());
         IPage<ModTasks> pageResult = baseMapper.selectSharedTasksByPage(page, projectId, requestDTO.getKeyword());
+
+        List<ModTasksVO> modTasksVO = pageResult.getRecords().stream().map(ModTasksVO::new).toList();
         
         Map<String, Object> result = new HashMap<>();
-        result.put("records", pageResult.getRecords());
+        result.put("records", modTasksVO);
         result.put("total", pageResult.getTotal());
         result.put("size", pageResult.getSize());
         result.put("current", pageResult.getCurrent());
@@ -88,9 +92,11 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         
         Page<ModTasks> page = new Page<>(requestDTO.getPageNum(), requestDTO.getPageSize());
         IPage<ModTasks> pageResult = baseMapper.selectPrivateTasksByPage(page, projectId, requestDTO.getKeyword());
+
+        List<ModTasksVO> modTasksVO = pageResult.getRecords().stream().map(ModTasksVO::new).toList();
         
         Map<String, Object> result = new HashMap<>();
-        result.put("records", pageResult.getRecords());
+        result.put("records", modTasksVO);
         result.put("total", pageResult.getTotal());
         result.put("size", pageResult.getSize());
         result.put("current", pageResult.getCurrent());
