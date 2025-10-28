@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
  * @since 2025-05-28
  */
 @RestController
-@RequestMapping("/projectManagement/{accessType}/taskManagement")
+@RequestMapping("/modTasks")
 public class ModTasksController {
     
     @Autowired
@@ -25,7 +25,7 @@ public class ModTasksController {
     /**
      * 获取任务分页列表
      */
-    @GetMapping("/tasks/{projectId}")
+    @PostMapping("/{accessType}/{projectId}/page")
     public ApiResult<?> getTasksPage(@PathVariable String accessType,
                                      @PathVariable Integer projectId,
                                      PageRequestDTO requestDTO) {
@@ -37,7 +37,7 @@ public class ModTasksController {
     /**
      * 创建新任务
      */
-    @PostMapping("/tasks/{projectId}")
+    @PostMapping("/{accessType}/{projectId}/create")
     public ApiResult<?> createTask(@PathVariable String accessType,
                                    @PathVariable Integer projectId,
                                    @RequestBody TaskCreateDTO createDTO) {
@@ -50,7 +50,7 @@ public class ModTasksController {
     /**
      * 删除任务
      */
-    @DeleteMapping("/tasks/{taskId}")
+    @DeleteMapping("/delete/{taskId}")
     public ApiResult<?> deleteTask(@PathVariable String taskId) {
         return modTasksService.deleteTask(taskId);
     }
@@ -58,7 +58,7 @@ public class ModTasksController {
     /**
      * 开始任务
      */
-    @PostMapping("/tasks/{taskId}/start")
+    @PutMapping("/start/{taskId}")
     public ApiResult<?> startTask(@PathVariable String taskId) {
         return modTasksService.startTask(taskId);
     }
@@ -66,7 +66,7 @@ public class ModTasksController {
     /**
      * 查询任务状态，专门为监控任务轮询设置的获取状态接口
      */
-    @GetMapping("/tasks/{taskId}/status")
+    @GetMapping("/status/{taskId}")
     public ApiResult<?> getTaskStatus(@PathVariable String taskId) {
         return modTasksService.getTaskStatus(taskId);
     }
@@ -74,7 +74,7 @@ public class ModTasksController {
     /**
      * 停止任务
      */
-    @PostMapping("/tasks/{taskId}/stop")
+    @PutMapping("/stop/{taskId}")
     public ApiResult<?> stopTask(@PathVariable String taskId) {
         return modTasksService.stopTask(taskId);
     }

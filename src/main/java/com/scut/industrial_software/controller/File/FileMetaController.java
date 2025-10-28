@@ -16,8 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.web.multipart.support.StandardMultipartHttpServletRequest;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.Part;
+import java.io.InputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
@@ -72,11 +71,10 @@ public class FileMetaController {
             }
 
             // 转换为 Spring 的 MultipartHttpServletRequest
-            MultipartHttpServletRequest multipartRequest = (MultipartHttpServletRequest) request;
 
             // 获取文件部分（使用 Spring 的方式）
-            MultipartFile multipartFile = multipartRequest.getFile("file");
-            if (multipartFile == null || multipartFile.isEmpty()) {
+            MultipartFile multipartFile = ((MultipartHttpServletRequest) request).getFile("file");
+            if (multipartFile.isEmpty()) {
                 return ApiResult.failed("未提供上传文件");
             }
             FileMetaVO fileMetaVO = fileMetaService.uploadFileStream(dbType, fileName, multipartFile);
@@ -192,8 +190,8 @@ public class FileMetaController {
      * @param fileId 文件Id
      * @return 操作结果
      */
-    @DeleteMapping("/files")
-    public ApiResult<Object> deleteFile(@RequestParam DbType dbType,
+    @DeleteMapping("/delete")
+    public ApiResult<Object> deleteFile(@RequestParam String dbType,
                                         @RequestParam String fileId) {
         log.info("删除文件类型: {}, 删除文件Id:{}", dbType, fileId);
         boolean result = fileMetaService.deleteFile(fileId);

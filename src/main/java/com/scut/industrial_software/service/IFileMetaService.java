@@ -11,6 +11,8 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.Part;
 import java.io.InputStream;
 
+import java.io.InputStream;
+
 /**
  * <p>
  * 文件元数据表 服务类

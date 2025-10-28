@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.scut.industrial_software.common.api.ApiResult;
+import com.scut.industrial_software.common.exception.ApiException;
+import com.scut.industrial_software.common.api.ApiErrorCode;
 import com.scut.industrial_software.model.dto.PageRequestDTO;
 import com.scut.industrial_software.model.dto.TaskCreateDTO;
 import com.scut.industrial_software.model.entity.ModProjects;
@@ -57,7 +59,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         // 先检查项目是否存在且为共享项目
         ModProjects project = modProjectsService.getById(projectId);
         if (project == null) {
-            return ApiResult.failed("项目不存在");
+            throw new ApiException(ApiErrorCode.PROJECT_NOT_FOUND);
         }
         
         if (project.getProjectStatus() != 0) {
@@ -83,7 +85,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         // 先检查项目是否存在且为私人项目
         ModProjects project = modProjectsService.getById(projectId);
         if (project == null) {
-            return ApiResult.failed("项目不存在");
+            throw new ApiException(ApiErrorCode.PROJECT_NOT_FOUND);
         }
         
         if (project.getProjectStatus() != 1) {
@@ -109,7 +111,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         // 先检查项目是否存在且为共享项目
         ModProjects project = modProjectsService.getById(projectId);
         if (project == null) {
-            return ApiResult.failed("项目不存在");
+            throw new ApiException(ApiErrorCode.PROJECT_NOT_FOUND);
         }
         
         if (project.getProjectStatus() != 0) {
@@ -128,6 +130,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         ModTasks task = new ModTasks();
         task.setTaskName(createDTO.getTaskName());
         task.setCreatorId(creatorId);
+        task.setCreator(createDTO.getCreator());
         task.setCreationTime(LocalDateTime.now());
         task.setProjectId(projectId);
         task.setSimulationStage(createDTO.getSimulationStage());
@@ -135,22 +138,15 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         task.setStatus("未启动"); // 默认状态为未启动
         task.setComputeResource(createDTO.getComputeResource());
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("taskid",task.getTaskId());
-        result.put("task_name",createDTO.getTaskName());
-        result.put("creator",createDTO.getCreator());
-        result.put("simulationStage",createDTO.getSimulationStage());
-        result.put("type",createDTO.getType());
-        result.put("computeResource",createDTO.getComputeResource());
-        result.put("create_time",task.getCreationTime());
-        result.put("status",task.getStatus());
-
         boolean IsSave = this.save(task);
-        if (IsSave) {
-            return ApiResult.success(result, "创建成功");
-        } else {
-            return ApiResult.failed("创建失败");
+
+        if (!IsSave){
+            throw new ApiException(ApiErrorCode.TASK_CREATION_FAILED);
         }
+
+        ModTasksVO modTasksVO = new ModTasksVO(task);
+
+        return ApiResult.success(modTasksVO, "任务创建成功");
     }
 
     @Override
@@ -158,7 +154,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         // 先检查项目是否存在且为私人项目
         ModProjects project = modProjectsService.getById(projectId);
         if (project == null) {
-            return ApiResult.failed("项目不存在");
+            throw new ApiException(ApiErrorCode.PROJECT_NOT_FOUND);
         }
         
         if (project.getProjectStatus() != 1) {
@@ -177,6 +173,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         ModTasks task = new ModTasks();
         task.setTaskName(createDTO.getTaskName());
         task.setCreatorId(creatorId);
+        task.setCreator(createDTO.getCreator());
         task.setCreationTime(LocalDateTime.now());
         task.setProjectId(projectId);
         task.setSimulationStage(createDTO.getSimulationStage());
@@ -184,29 +181,34 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         task.setStatus("未启动"); // 默认状态为未启动
         task.setComputeResource(createDTO.getComputeResource());
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("taskid",task.getTaskId());
-        result.put("task_name",createDTO.getTaskName());
-        result.put("creator",createDTO.getCreator());
-        result.put("simulationStage",createDTO.getSimulationStage());
-        result.put("type",createDTO.getType());
-        result.put("computeResource",createDTO.getComputeResource());
-        result.put("create_time",task.getCreationTime());
-        result.put("status",task.getStatus());
-        
         boolean IsSave = this.save(task);
-        if (IsSave) {
-            return ApiResult.success(result, "创建成功");
-        } else {
-            return ApiResult.failed("创建失败");
+
+        if (!IsSave){
+            throw new ApiException(ApiErrorCode.TASK_CREATION_FAILED);
         }
+
+        ModTasksVO modTasksVO = new ModTasksVO(task);
+
+        return ApiResult.success(modTasksVO, "任务创建成功");
+
     }
 
     @Override
     public ApiResult<?> deleteTask(String taskId) {
-        ModTasks task = this.getById(taskId);
+        // 将task_%3d格式的taskId转换为整数ID
+        Integer taskIdInt = null;
+
+        if (taskId.startsWith("task_")) {
+            taskIdInt = Integer.parseInt(taskId.substring(5));
+        }
+
+        if (taskIdInt == null){
+            return ApiResult.failed("任务ID格式不正确");
+        }
+
+        ModTasks task = this.getById(taskIdInt);
         if (task == null) {
-            return ApiResult.failed("任务不存在");
+            throw new ApiException(ApiErrorCode.RESOURCE_NOT_FOUND);
         }
         
         // 填充创建者用户名信息
@@ -217,14 +219,13 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
             }
         }
         
-        boolean result = this.removeById(taskId);
+        boolean result = this.removeById(taskIdInt);
         if (result) {
             return ApiResult.success(null, "删除成功");
         } else {
-            return ApiResult.failed("删除失败");
+            throw new ApiException(ApiErrorCode.TASK_DELETION_FAILED);
         }
     }
-
 
     @Override
     public ApiResult<?> startTask(String taskId) {

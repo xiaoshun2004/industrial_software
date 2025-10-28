@@ -67,7 +67,7 @@ public class TokenFilter implements Filter {
                 requestURI.equals("/api/auth/verifyCode") ||
                 requestURI.startsWith("/dataManagement/") ||
                 requestURI.startsWith("/taskMonitor/") ||
-                requestURI.startsWith("/projectManagement/")){  // 添加文件接口白名单
+                requestURI.startsWith("/modTasks/")){  // 添加文件接口白名单
                 
                 // 如果是文件接口，设置一个默认用户，方便测试（实际过程中必须直接从threadLocal中获取）
                 if (requestURI.startsWith("/dataManagement/")) {
@@ -125,7 +125,6 @@ public class TokenFilter implements Filter {
                     response.getWriter().write("Token invalid or expired");
                     return;
                 }
-
 
                 log.info("当前用户id，name：{},{}",userId,name);
                 // 设置其他需要的字段...

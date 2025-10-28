@@ -10,7 +10,7 @@ public class ModTasksVO {
 
     private String taskId;
 
-    private String taskName;
+    private String task_name;
 
     private String creator;
 
@@ -25,8 +25,8 @@ public class ModTasksVO {
     private String status;
 
     public ModTasksVO(ModTasks modTasks) {
-        this.taskId = String.format("task_%03d",modTasks.getTaskId());
-        this.taskName = modTasks.getTaskName();
+        this.taskId = String.format("task_%d",modTasks.getTaskId());
+        this.task_name = modTasks.getTaskName();
         this.creator = modTasks.getCreator();
         this.simulationStage = modTasks.getSimulationStage();
         this.type = modTasks.getType();

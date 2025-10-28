@@ -292,7 +292,7 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteFile(String id) {
-        FileMeta fileMeta = getById(id);
+        FileMeta fileMeta = baseMapper.selectOne(new LambdaQueryWrapper<FileMeta>().eq(FileMeta::getFileUuid, id));
         if (fileMeta == null) {
             throw new ApiException(ApiErrorCode.RESOURCE_NOT_FOUND);
         }
@@ -303,8 +303,9 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
             throw new ApiException(ApiErrorCode.FORBIDDEN);
         }
 
-        //删除数据库记录
-        boolean IsRemove = removeById(id);
+        //根据fileMeta实例，删除数据库记录
+        boolean IsRemove = removeById(fileMeta.getId());
+
         if(!IsRemove){
             throw new ApiException("数据库记录删除失败");
         }

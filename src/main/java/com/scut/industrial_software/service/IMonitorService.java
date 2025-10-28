@@ -17,9 +17,9 @@ public interface IMonitorService {
 
     ApiResult<MonitorVO> startProgram(String taskId);
 
-    // MonitorVO monitorProgram(Long pid);
+     void monitorProgram(Long pid);
 
-    // void scheduledMonitor();
+    void scheduledMonitor();
 
     ApiResult<MonitorVO> stopProgram(String taskId);
 

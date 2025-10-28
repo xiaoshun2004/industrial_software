@@ -1,7 +1,6 @@
 package com.scut.industrial_software.common.api;
 
 
-
 public enum ApiErrorCode implements IErrorCode {
 
     /**
@@ -51,8 +50,31 @@ public enum ApiErrorCode implements IErrorCode {
     /**
      * 不支持的文件类型
      */
-    UNSUPPORTED_FILE_TYPE(1006, "不支持的文件类型");
-
+    UNSUPPORTED_FILE_TYPE(1006, "不支持的文件类型"),
+    /**
+     * 任务创建失败
+     */
+    TASK_CREATION_FAILED(2001, "任务创建失败"),
+    /**
+     * 任务删除失败
+     */
+    TASK_DELETION_FAILED(2002, "任务删除失败"),
+    /**
+     * 任务开始失败
+     */
+    TASK_START_FAILED(2003, "任务开始失败"),
+    /**
+     * 任务结束失败
+     */
+    TASK_STOP_FAILED(2004, "任务结束失败"),
+    /**
+     * 项目不存在
+     */
+    PROJECT_NOT_FOUND(2005, "项目不存在"),
+    /**
+     * 任务状态不允许此操作
+     */
+    INVALID_TASK_STATUS(2006, "任务状态不允许此操作");
 
     private final Integer code;
     private final String message;
