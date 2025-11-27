@@ -1,9 +1,13 @@
 package com.scut.industrial_software.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.scut.industrial_software.common.api.ApiErrorCode;
 import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.common.exception.ApiException;
+import com.scut.industrial_software.mapper.ModTasksMapper;
 import com.scut.industrial_software.model.dto.ProcessInfoDTO;
+import com.scut.industrial_software.model.entity.ModTasks;
 import com.scut.industrial_software.model.vo.MonitorVO;
 import com.scut.industrial_software.service.IMonitorService;
 import org.slf4j.Logger;
@@ -25,7 +29,7 @@ import java.util.concurrent.*;
 import static com.scut.industrial_software.utils.WindowFocusUtil.bringProcessWindowToFront;
 
 @Service
-public class MonitorServiceImpl implements IMonitorService {
+public class MonitorServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> implements IMonitorService {
 
     // 使用Sigar获取系统信息
     private final String programPath = "D:/exe/GETexe4/dist/main/main.exe";
@@ -56,6 +60,8 @@ public class MonitorServiceImpl implements IMonitorService {
             launchExe(taskId, programPath);
 
             MonitorVO data = new MonitorVO(taskId,"仿真中");
+
+            upDateStatusByTaskId(taskId, "仿真中");
 
             return ApiResult.success(data);
 
@@ -122,6 +128,7 @@ public class MonitorServiceImpl implements IMonitorService {
                     processInfo.setEndTime(LocalDateTime.now());
                     processInfo.setExitCode(exitCode);
                     processInfo.setStatus("completed");
+                    upDateStatusByTaskId(taskId, "已结束");
                     logger.info("进程执行完成，PID: {}, 退出码: {}", processInfo.getPid(), exitCode);
                 }
                 // 处理已经被中断的进程信息
@@ -159,11 +166,14 @@ public class MonitorServiceImpl implements IMonitorService {
                     process.destroy();
                     processInfo.setEndTime(LocalDateTime.now());
                     logger.info("进程已终止，PID={}", processInfo.getPid());
+                    upDateStatusByTaskId(taskId, "已结束");
                     return ApiResult.success(new MonitorVO(taskId,"已结束"));
                 }else{
+                    upDateStatusByTaskId(taskId, "已结束");
                     return ApiResult.success(new MonitorVO(taskId,"已结束"));
                 }
             } else {
+                upDateStatusByTaskId(taskId, "已结束");
                 return ApiResult.success(new MonitorVO(taskId,"已结束"));
             }
         } catch (Exception e) {
@@ -232,6 +242,7 @@ public class MonitorServiceImpl implements IMonitorService {
                             info.setEndTime(LocalDateTime.now());
                             info.setExitCode(-1); // 未获取到真实退出码，使用 -1 表示未知
                             info.setStatus("completed");
+                            upDateStatusByTaskId(entry.getKey(), "已结束");
                             logger.info("将 processMap 中的任务标记为 completed，taskId={}, pid={}", entry.getKey(), pid);
                         }
                         break;
@@ -261,6 +272,19 @@ public class MonitorServiceImpl implements IMonitorService {
         } catch (Exception e) {
             logger.error("监控进程{}失败: {}", pid, e.getMessage());
             throw e;
+        }
+    }
+
+    private void upDateStatusByTaskId(String taskId , String newStatus){
+        taskId = taskId.substring(5);
+        LambdaUpdateWrapper<ModTasks> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(ModTasks::getTaskId,Integer.parseInt(taskId)).set(ModTasks::getStatus,newStatus);
+
+        boolean result = this.update(updateWrapper);
+        if (result) {
+            logger.info("任务状态更新成功, 任务ID: {}", taskId);
+        } else{
+            logger.error("任务状态更新失败, 任务ID: {}", taskId);
         }
     }
 
