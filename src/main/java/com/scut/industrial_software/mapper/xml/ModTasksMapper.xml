@@ -12,6 +12,7 @@
             t.project_id,
             t.simulation_stage,
             t.type,
+            t.compute_resource,
             t.status,
             u.username AS creator
         FROM mod_tasks t
