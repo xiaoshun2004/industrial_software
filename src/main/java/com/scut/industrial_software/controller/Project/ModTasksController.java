@@ -28,12 +28,12 @@ public class ModTasksController {
     @PostMapping("/{accessType}/{projectId}/page")
     public ApiResult<?> getTasksPage(@PathVariable String accessType,
                                      @PathVariable Integer projectId,
-                                     PageRequestDTO requestDTO) {
+                                     // @RequestBody将客户端的JSON请求体反序列化为Java对象
+                                     @RequestBody PageRequestDTO requestDTO) {
         return "shared".equals(accessType) ?
                 modTasksService.getSharedTasksPage(projectId, requestDTO) :
                 modTasksService.getPrivateTasksPage(projectId, requestDTO);
     }
-
     /**
      * 创建新任务
      */

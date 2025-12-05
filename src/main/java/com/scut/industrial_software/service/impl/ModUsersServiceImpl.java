@@ -42,8 +42,8 @@ import java.util.Map;
  * @author zhou
  * @since 2025-03-29
  */
-@Service
 @Slf4j
+@Service
 public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> implements IModUsersService {
 
     @Autowired

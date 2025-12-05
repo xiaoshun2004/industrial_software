@@ -30,6 +30,7 @@ import java.util.Map;
 @Controller
 @RequestMapping("/modUsers")
 public class ModUsersController {
+
     @Autowired
     private IModUsersService iModUsersService;
 
@@ -82,7 +83,7 @@ public class ModUsersController {
 
     /**
      * 修改用户密码
-     * @param changePasswordDTO
+     * @param changePasswordDTO 修改密码参数
      * @return
      */
     @ResponseBody
