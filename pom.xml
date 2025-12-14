@@ -176,6 +176,13 @@
           <artifactId>jna-platform</artifactId>
           <version>5.12.1</version>
         </dependency>
+        <!-- TrueLicense开源证书管理引擎-->
+        <dependency>
+            <groupId>de.schlichtherle.truelicense</groupId>
+            <artifactId>truelicense-core</artifactId>
+            <version>1.33</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>

@@ -1,0 +1,11 @@
+私钥库的密码："public_password1234"
+
+创建私钥库的命令：
+keytool -genkeypair -alias privateKey -keyalg RSA -keysize 2048 -sigalg SHA256withRSA -keystore src/main/resources/license/privateKeys.keystore -storepass public_password1234 -validity 3650 -dname "CN=localhost, OU=localhost, O=localhost, L=SH, ST=SH, C=CN"
+把私钥库的公钥导出到一个文件中：
+keytool -exportcert -alias "privateKey" -keystore "src/main/resources/privateKeys.keystore" -storepass "public_password1234" -file "src/main/resources/license/certfile.cer"
+再将这个证书文件导入到公钥库中：
+keytool -import -alias "publicCert" -file "src/main/resources/license/certfile.cer" -keystore "src/main/resources/license/publicCerts.keystore" -storepass "public_password1234"
+
+相关博客链接：
+https://llxpbbs.com/archives/wei-ming-ming-wen-zhang
