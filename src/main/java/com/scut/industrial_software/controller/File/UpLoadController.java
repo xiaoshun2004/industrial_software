@@ -18,7 +18,7 @@ public class UpLoadController {
     private AliOSSUtils aliOSSUtils;
 
     @PostMapping("/upload")
-    public ApiResult<String> uplaod(MultipartFile zip) throws IOException {
+    public ApiResult<String> upload(MultipartFile zip) throws IOException {
         log.info("上传过来的参数：{}", zip.getOriginalFilename());
 
         //调用阿里云OSS工具类【AliOSSUtiles】进行文件上传

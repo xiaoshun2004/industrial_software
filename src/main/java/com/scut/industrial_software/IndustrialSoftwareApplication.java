@@ -9,7 +9,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @ServletComponentScan
 @EnableScheduling          // 开启定时任务支持
-@MapperScan("com.scut.industrial_software.mapper")
 public class IndustrialSoftwareApplication {
 
     public static void main(String[] args) {

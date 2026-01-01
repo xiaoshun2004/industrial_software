@@ -14,6 +14,9 @@ public class RedisConstants {
     // token 的过期时间（30分钟）
     public static final long TOKEN_TTL = 30L;
 
+    // 黑名单token过期时间
+    public static final long BLACKLIST_TOKEN_TTL = 10L;
+
     // 验证码的过期时间（5分钟）
     public static final long VERIFY_CODE_TTL = 5L; // 验证码有效期为 5 分钟
 

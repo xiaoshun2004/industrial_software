@@ -1,5 +1,6 @@
 package com.scut.industrial_software.service.impl;
 
+import com.scut.industrial_software.model.constant.RedisConstants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -48,7 +49,7 @@ public class TokenBlacklistService {
         
         try {
             String value = reason != null ? reason : "kicked_out_by_new_login";
-            redisTemplate.opsForValue().set(BLACKLIST_KEY_PREFIX + token, value, TOKEN_TTL, TimeUnit.MINUTES);
+            redisTemplate.opsForValue().set(BLACKLIST_KEY_PREFIX + token, value, RedisConstants.BLACKLIST_TOKEN_TTL, TimeUnit.MINUTES);
             log.info("设备已被踢下线，原因: {}", reason);
         } catch (Exception e) {
             log.error("踢出设备时发生异常", e);

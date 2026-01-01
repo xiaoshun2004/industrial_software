@@ -20,6 +20,7 @@ import java.util.UUID;
 @Component
 public class AliOSSUtils {
     private final AliOssProperties aliOssProperties;
+
     @Autowired
     public AliOSSUtils(AliOssProperties aliOssProperties) {
         this.aliOssProperties = aliOssProperties;
@@ -27,7 +28,8 @@ public class AliOSSUtils {
 
 
     /**
-     * 实现上传图片到OSS
+     * 实现上传图片到OSS（对象存储服务）
+     * 通过阿里云SDK来创建客户端，调用putObject方法上传文件
      */
     public String upload(MultipartFile file) throws IOException {
 
