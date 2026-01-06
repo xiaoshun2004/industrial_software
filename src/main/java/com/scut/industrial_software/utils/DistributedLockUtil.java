@@ -113,11 +113,11 @@ public class DistributedLockUtil {
         try {
             DefaultRedisScript<Long> script = new DefaultRedisScript<>();
             script.setScriptText(LuaScriptConstants.RELEASE_LOCK_SCRIPT);
-            script.setResultType(Long.class);
+            script.setResultType(Long.class);      // 设置返回值类型
             
             Long result = redisTemplate.execute(script, Arrays.asList(lockKey), lockValue);
             
-            if (result != null && result == 1) {
+            if (result == 1) {
                 log.debug("成功释放分布式锁: {}", lockKey);
             } else {
                 log.warn("释放分布式锁失败，可能已过期: {}", lockKey);

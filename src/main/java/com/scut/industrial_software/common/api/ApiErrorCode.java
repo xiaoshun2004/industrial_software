@@ -52,6 +52,10 @@ public enum ApiErrorCode implements IErrorCode {
      */
     UNSUPPORTED_FILE_TYPE(1006, "不支持的文件类型"),
     /**
+     * 证书生成失败
+     */
+    CERTIFICATE_GENERATION_FAILED(1007, "证书生成失败"),
+    /**
      * 任务创建失败
      */
     TASK_CREATION_FAILED(2001, "任务创建失败"),

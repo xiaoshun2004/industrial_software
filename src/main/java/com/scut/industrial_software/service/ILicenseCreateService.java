@@ -1,6 +1,8 @@
 package com.scut.industrial_software.service;
 
-import com.scut.industrial_software.model.entity.LicenseCreatorParam;
+import com.scut.industrial_software.model.entity.license.PlatformLicenseCreatorParam;
+
+import java.io.File;
 
 public interface ILicenseCreateService {
     /**
@@ -11,6 +13,6 @@ public interface ILicenseCreateService {
      * 生成License证书并保存
      * @param param 证书生成参数实体
      */
-    void generateLicense(LicenseCreatorParam param) throws Exception;
+    boolean generateLicense(PlatformLicenseCreatorParam param, File licenseFile);
 
 }
