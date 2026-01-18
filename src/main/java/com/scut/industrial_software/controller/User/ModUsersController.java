@@ -90,7 +90,7 @@ public class ModUsersController {
     @PostMapping("/changePassword")
     public ApiResult<Object> changePassword(@Valid @RequestBody ChangePasswordDTO changePasswordDTO) {
         log.info("用户 {} 正在修改密码", UserHolder.getUser().getId()); // 假设使用 UserHolder 获取当前用户 ID
-        Long userId = UserHolder.getUser().getId();  // 获取当前用户 ID
+        Integer userId = UserHolder.getUser().getId();  // 获取当前用户 ID
 
         return iModUsersService.changePassword(userId, changePasswordDTO);
     }

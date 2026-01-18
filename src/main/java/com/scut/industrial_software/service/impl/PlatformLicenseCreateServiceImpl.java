@@ -1,10 +1,10 @@
 package com.scut.industrial_software.service.impl;
 
 import com.scut.industrial_software.common.exception.CertificateGenerationException;
-import com.scut.industrial_software.config.LicenseProperties;
+import com.scut.industrial_software.config.PlatformLicenseProperties;
 import com.scut.industrial_software.model.entity.license.CustomKeyStoreParam;
 import com.scut.industrial_software.model.entity.license.PlatformLicenseCreatorParam;
-import com.scut.industrial_software.service.ILicenseCreateService;
+import com.scut.industrial_software.service.IPlatformLicenseService;
 import de.schlichtherle.license.*;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -26,10 +26,10 @@ import java.util.prefs.Preferences;
  */
 @Slf4j
 @Service
-public class PlatformLicenseCreateServiceImpl implements ILicenseCreateService {
+public class PlatformLicenseCreateServiceImpl implements IPlatformLicenseService {
 
     @Resource
-    private LicenseProperties licenseProperties;
+    private PlatformLicenseProperties licenseProperties;
 
     private final static X500Principal DEFAULT_HOLDER_AND_ISSUER = new X500Principal("CN=localhost, OU=localhost, O=localhost, L=SH, ST=SH, C=CN");
 

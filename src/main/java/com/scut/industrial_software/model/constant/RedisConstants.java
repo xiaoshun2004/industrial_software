@@ -11,6 +11,9 @@ public class RedisConstants {
     // 用户登录锁的 Redis 键前缀
     public static final String USER_LOGIN_LOCK_PREFIX = "user:login:lock:";
 
+    // 工具证书生成的 Redis 键前缀
+    public static final String TOOL_LICENSE_KEY_PREFIX = "license:generate:";
+
     // token 的过期时间（30分钟）
     public static final long TOKEN_TTL = 30L;
 

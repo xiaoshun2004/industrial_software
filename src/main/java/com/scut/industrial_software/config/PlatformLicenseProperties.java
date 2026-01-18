@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "ptc.license")
 @Data
-public class LicenseProperties {
+public class PlatformLicenseProperties {
     /**
      * 公钥别称
      */

@@ -201,7 +201,7 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
      * @return
      */
     @Transactional
-    public ApiResult<Object> changePassword(Long userId, ChangePasswordDTO changePasswordDTO) {
+    public ApiResult<Object> changePassword(Integer userId, ChangePasswordDTO changePasswordDTO) {
         // 获取用户信息
         ModUsers user = baseMapper.selectById(userId);
         if (user == null) {
@@ -334,7 +334,7 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
      * @param userId 用户ID
      * @return 用户信息VO
      */
-    private UserInfoVO getUserInfoById(Long userId) {
+    private UserInfoVO getUserInfoById(Integer userId) {
         // 查询用户信息，排除密码字段
         ModUsers user = baseMapper.selectById(userId);
         if (user == null) {

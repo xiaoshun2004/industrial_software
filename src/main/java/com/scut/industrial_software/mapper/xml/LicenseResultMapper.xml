@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.scut.industrial_software.mapper.LicenseResultMapper">
+    <!--
+        许可证生成结果的 Mapper XML。
+        如需编写自定义 SQL，可在此处添加 <select>/<insert>/<update>/<delete> 节点。
+    -->
+
+    <!--
+        查询指定用户和工具类型下状态为有效（status = 1/true）的许可证记录。
+        返回首条匹配记录，可按需调整 LIMIT 逻辑。
+    -->
+    <select id="selectActiveByUserIdAndToolType" resultType="com.scut.industrial_software.model.entity.license.LicenseResultInfo">
+        SELECT
+            license_id,
+            tool_type,
+            license_path,
+            license_name,
+            user_id,
+            create_time,
+            expire_time,
+            status
+        FROM license_result_info
+        WHERE user_id = #{userId}
+          AND tool_type = #{toolType}
+          AND status = 1
+        LIMIT 1
+    </select>
+
+    <!--
+        将指定用户和工具类型的许可证状态置为无效（status = 0）。
+        返回受影响行数，通常应为 0 或 1。
+    -->
+    <update id="deactivateByUserIdAndToolType">
+        UPDATE license_result_info
+        SET status = 0
+        WHERE user_id = #{userId}
+          AND tool_type = #{toolType}
+    </update>
+</mapper>

@@ -32,7 +32,7 @@ public interface FileMetaMapper extends BaseMapper<FileMeta> {
      * @param dbType 数据库类型
      * @return 分页结果
      */
-    IPage<FileMeta> selectPageByCreatorIdAndDbType(Page<FileMeta> page, @Param("creatorId") Long creatorId, @Param("dbType") String dbType);
+    IPage<FileMeta> selectPageByCreatorIdAndDbType(Page<FileMeta> page, @Param("creatorId") Integer creatorId, @Param("dbType") String dbType);
 
     /**
      * 根据关键字分页模糊查询文件列表

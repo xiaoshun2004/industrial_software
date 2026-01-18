@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 平台License证书生成接口
+ * 求解器处理器工具License证书生成接口
  */
 @RestController
 @Api(tags = "license管理")

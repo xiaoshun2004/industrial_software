@@ -34,7 +34,7 @@ public class PasswordChangeTest {
 
         Callable<String> task1 = () -> {
             UserDTO user = new UserDTO();
-            user.setId(1L); // 模拟当前登录用户 ID
+            user.setId(1); // 模拟当前登录用户 ID
             UserHolder.saveUser(user); // 设置当前用户上下文
 
             ApiResult<Object> result = this.modUsersService.changePassword(UserHolder.getUser().getId(),dto1);
@@ -45,7 +45,7 @@ public class PasswordChangeTest {
 
         Callable<String> task2 = () -> {
             UserDTO user = new UserDTO();
-            user.setId(1L); // 同一个用户，模拟并发
+            user.setId(1); // 同一个用户，模拟并发
             UserHolder.saveUser(user);
 
             ApiResult<Object> result = this.modUsersService.changePassword(UserHolder.getUser().getId(),dto2);

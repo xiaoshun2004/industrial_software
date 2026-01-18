@@ -62,7 +62,7 @@ public class FileMeta implements Serializable {
     /**
      * 创建者用户ID
      */
-    private Long creatorId;
+    private Integer creatorId;
 
     /**
      * 创建者用户名 (冗余字段，方便查询)
