@@ -43,42 +43,35 @@ public class LicenseServiceImpl implements ILicenseService {
     @Override
     // 向客户端返回生成的License文件路径和密钥
     public ApiResult<Object> createLicense(String toolType) throws Exception {
-        // 1. 先判断数据库中是否有该工具类型的未过期证书，若有则直接返回已有证书信息
+        // 1. 生成证书时的幂等性设计，保证同一用户同一工具类型在同一时间只能生成一份证书，这里使用Redisson分布式锁实现
+        // 1.ps01 这里采用Redisson的分布式锁的原因在于，因为调用第三方库生成证书可能时间比较长，如果使用普通的Redis分布式锁可能会因为锁过期而导致证书重复生成的问题
         // 1.1 获取当前用户ID
-        Integer userId = UserHolder.getUser().getId();
-        // 1.2 查询数据库中是否有该用户该工具类型的未过期证书
-        LicenseResultInfo existingLicense = licenseResultMapper.selectActiveByUserIdAndToolType(userId, toolType);
-        if (existingLicense != null) {
-            // 1.3 如果存在未过期证书，根据当前时间进行下一次判断是否生效
-            LocalDateTime now = LocalDateTime.now();
-            if (now.isBefore(existingLicense.getExpireTime())) {
-                // 1.3.1 证书仍在有效期内，直接返回已有证书信息
-                log.info("An active license already exists for user ID {} and tool type {}. Returning existing license.", userId, toolType);
-                // 1.3.2 将已有证书信息封装成VO返回给前端
-                LicenseResultVO licenseResultVO = convertToVO(existingLicense);
-                return ApiResult.success(licenseResultVO);
-            } else {
-                // 1.3.3 证书已过期，更新数据库里的状态为无效
-                log.info("The existing license for user ID {} and tool type {} has expired. Generating a new license.", userId, toolType);
-                licenseResultMapper.deactivateByUserIdAndToolType(userId, toolType);
-            }
-        }
-
-        // 2. 生成证书时的幂等性设计，保证同一用户同一工具类型在同一时间只能生成一份证书，这里使用Redisson分布式锁实现
-        // 2.ps01 这里采用Redisson的分布式锁的原因在于，因为调用第三方库生成证书可能时间比较长，如果使用普通的Redis分布式锁可能会因为锁过期而导致证书重复生成的问题
+        // Integer userId = UserHolder.getUser().getId();
+        Integer userId = 20; // TODO: 目前先写死，后续集成用户模块后放开，当前为了方便测试
         String lockKey = RedisConstants.TOOL_LICENSE_KEY_PREFIX + userId + ":" + toolType;
         RLock lock = redissonClient.getLock(lockKey);
         boolean locked = false;
         try {
-            locked = lock.tryLock(5, -1, TimeUnit.SECONDS);
+            locked = lock.tryLock(2, -1, TimeUnit.SECONDS);       // 等待时间很大程序上取决于证书生成的时间
             if (!locked) {
                 return ApiResult.failed("请稍后重试");
             }
-            // 3. 如果获得锁，先再次检查数据库中是否有该用户该工具类型的未过期证书，防止并发下重复生成
-            existingLicense = licenseResultMapper.selectActiveByUserIdAndToolType(userId, toolType);
+            // 2. 如果获得锁，先检查数据库中是否存在该用户对该工具类型的未过期证书
+            LicenseResultInfo existingLicense = licenseResultMapper.selectActiveByUserIdAndToolType(userId, toolType);
             if (existingLicense != null) {
-                LicenseResultVO licenseResultVO = convertToVO(existingLicense);
-                return ApiResult.success(licenseResultVO);
+                // 2.1 如果存在未过期证书，根据当前时间进行下一次判断是否生效
+                LocalDateTime now = LocalDateTime.now();
+                if (now.isBefore(existingLicense.getExpireTime())) {
+                    // 2.1.1 证书仍在有效期内，直接返回已有证书信息
+                    log.info("An active license already exists for user ID {} and tool type {}. Returning existing license.", userId, toolType);
+                    // 2.1.2 将已有证书信息封装成VO返回给前端
+                    LicenseResultVO licenseResultVO = convertToVO(existingLicense);
+                    return ApiResult.success(licenseResultVO);
+                } else {
+                    // 2.2 证书已过期，更新数据库里的状态为无效
+                    log.info("The existing license for user ID {} and tool type {} has expired. Generating a new license.", userId, toolType);
+                    licenseResultMapper.deactivateByUserIdAndToolType(userId, toolType);
+                }
             }
             // 4. 调用工具执行证书生成逻辑并保存进数据库，返回给前端
             return generateAndPersistLicense(toolType, userId);
@@ -90,7 +83,7 @@ public class LicenseServiceImpl implements ILicenseService {
     }
 
     private ApiResult<Object> generateAndPersistLicense(String toolType, Integer userId) throws Exception {
-        log.info("Currently, a type {} certificate is being generated. The applicant for the certificate is {}.", toolType, UserHolder.getUser().getName());
+        log.info("Currently, a type {} certificate is being generated. The applicant for the certificate is {}.", toolType, userId);
         ILicenseStrategy strategy = licenseFactory.getStrategy(toolType);
         // 1. 调用工具执行证书生成逻辑
         LicenseResult result = strategy.generateLicense();
