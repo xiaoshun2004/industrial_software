@@ -34,6 +34,31 @@ public class CustomKeyStoreParam extends AbstractKeyStoreParam {
      */
     @Override
     public InputStream getStream() throws IOException {
-        return new FileInputStream(storePath);
+        try {
+            if (storePath == null || storePath.trim().isEmpty()) {
+                throw new FileNotFoundException("Keystore path is empty");
+            }
+            // 支持classpath:前缀，否则回落为文件系统路径
+            if (storePath.startsWith("classpath:")) {
+                String cp = storePath.substring("classpath:".length());
+                if (!cp.startsWith("/")) {
+                    cp = "/" + cp;
+                }
+                InputStream is = getClass().getResourceAsStream(cp);
+                if (is == null) {
+                    throw new FileNotFoundException("Keystore not found in classpath: " + storePath);
+                }
+                return is;
+            }
+            File file = new File(storePath);
+            if (!file.exists()) {
+                throw new FileNotFoundException("Keystore file not found: " + storePath);
+            }
+            return new FileInputStream(file);
+        } catch (IOException ex) {
+            throw ex; // 保留原始IO异常
+        } catch (Exception ex) {
+            throw new IOException("Failed to load keystore from path: " + storePath, ex);
+        }
     }
 }

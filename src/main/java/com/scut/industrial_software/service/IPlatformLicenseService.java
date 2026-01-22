@@ -4,7 +4,7 @@ import com.scut.industrial_software.model.entity.license.PlatformLicenseCreatorP
 
 import java.io.File;
 
-public interface ILicenseCreateService {
+public interface IPlatformLicenseService {
     /**
      * 生成License证书全流程主体实现
      */

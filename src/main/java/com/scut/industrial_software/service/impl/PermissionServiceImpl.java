@@ -60,8 +60,8 @@ public class PermissionServiceImpl implements IPermissionService {
      */
     public boolean isCurrentUserAdmin() {
         try {
-            Long currentUserId = UserHolder.getUser().getId();
-            return hasPermission(currentUserId.intValue(), PERMISSION_ADMIN);
+            Integer currentUserId = UserHolder.getUser().getId();
+            return hasPermission(currentUserId, PERMISSION_ADMIN);
         } catch (Exception e) {
             log.error("检查当前用户管理员权限时发生异常", e);
             return false;

@@ -62,7 +62,7 @@ public interface IModUsersService extends IService<ModUsers> {
      * @param changePasswordDTO
      * @return
      */
-    ApiResult<Object> changePassword(Long userId, @Valid ChangePasswordDTO changePasswordDTO);
+    ApiResult<Object> changePassword(Integer userId, @Valid ChangePasswordDTO changePasswordDTO);
 
 
     /**

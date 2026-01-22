@@ -61,7 +61,7 @@ public class RefreshInterceptor implements HandlerInterceptor {
             Claims claims = JwtUtils.parseToken(token);
 
             // 4.2 从Claims提取用户信息并存储到UserHolder
-            Long userId = claims.get("id", Long.class);
+            Integer userId = claims.get("id", Integer.class);
             String name = claims.get("name", String.class);
 
             // 4.3 创建UserDTO对象并设置属性

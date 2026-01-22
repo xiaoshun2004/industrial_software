@@ -71,7 +71,7 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
 
             // 获取当前登录用户
             UserDTO currentUser = UserHolder.getUser();
-            Long userId = currentUser != null ? currentUser.getId() : null;
+            Integer userId = currentUser != null ? currentUser.getId() : null;
             String username = currentUser != null ? currentUser.getName() : "unknown";
 
             // 生成文件UUID和保存路径
@@ -143,7 +143,7 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
 
             // 获取当前登录用户
             UserDTO currentUser = UserHolder.getUser();
-            Long userId = currentUser != null ? currentUser.getId() : null;
+            Integer userId = currentUser != null ? currentUser.getId() : null;
             String username = currentUser != null ? currentUser.getName() : "unknown";
 
             // 生成文件UUID和保存路径
