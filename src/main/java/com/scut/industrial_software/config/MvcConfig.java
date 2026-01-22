@@ -27,9 +27,9 @@ public class MvcConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                         "/auth/verifyCode",
                         "/auth/jsonLogin",
-                        "/api/modUsers/register",
-                        "/api/auth/jsonLogin",
-                        "/api/auth/verifyCode"
+                        "/modUsers/register",
+                        "/auth/jsonLogin",
+                        "/auth/verifyCode"
                 )
                 .order(1); // Set order to ensure it runs after RefreshInterceptor
     }

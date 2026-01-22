@@ -18,6 +18,30 @@ SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- ----------------------------
+-- Table structure for components
+-- ----------------------------
+DROP TABLE IF EXISTS `components`;
+CREATE TABLE `components` (
+    `id` int NOT NULL AUTO_INCREMENT,
+    `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `version` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `size` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `description` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+    `dynamics_direction` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `module_type` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    `resource_type` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+INSERT INTO `components` VALUES (1,'冲击前处理程序', '1.0', '2.5MB', '这是冲击前处理程序', '冲击', '前处理', 'CPU');
+INSERT INTO `components` VALUES (2,'CPU冲击求解器程序', '1.0', '2.6MB', '这是CPU冲击求解器', '冲击', '求解器', 'CPU');
+INSERT INTO `components` VALUES (3,'GPU冲击求解器程序', '1.0', '2.7MB', '这是GPU冲击求解器', '冲击', '求解器', 'GPU');
+INSERT INTO `components` VALUES (4,'结构前处理程序', '1.0', '2.8MB', '这是结构前处理程序', '结构', '前处理', 'CPU');
+INSERT INTO `components` VALUES (5,'结构求解器程序', '1.0', '2.9MB', '这是结构求解器', '结构', '求解器', 'CPU');
+INSERT INTO `components` VALUES (6,'多体前处理程序', '1.0', '3.0MB', '这是多体前处理程序', '多体', '前处理', 'CPU');
+INSERT INTO `components` VALUES (7,'多体求解器程序', '1.0', '3.1MB', '这是多体求解器', '多体', '求解器', 'CPU');
+INSERT INTO `components` VALUES (8,'通用后处理程序', '1.0', '3.2MB', '这是通用后处理程序', '通用', '后处理', 'CPU');
+
+-- ----------------------------
 -- Table structure for file_meta
 -- ----------------------------
 DROP TABLE IF EXISTS `file_meta`;
