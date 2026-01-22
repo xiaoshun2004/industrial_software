@@ -52,4 +52,9 @@ public class Components {
      * 资源类型
      */
     private String resourceType;
+
+    /**
+     * 组件下载地址
+     */
+    private String address;
 }
