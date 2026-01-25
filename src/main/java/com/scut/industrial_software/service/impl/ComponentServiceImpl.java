@@ -2,10 +2,12 @@ package com.scut.industrial_software.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.scut.industrial_software.common.api.ApiResult;
+import com.scut.industrial_software.config.ComponentStoreProperties;
 import com.scut.industrial_software.mapper.ComponentsMapper;
 import com.scut.industrial_software.model.entity.Components;
 import com.scut.industrial_software.service.IComponentService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -22,25 +24,28 @@ import java.util.List;
 @Service
 public class ComponentServiceImpl extends ServiceImpl<ComponentsMapper, Components> implements IComponentService {
 
-    private String resourcePath = "D:/resource/";
+    // private String resourcePath = "D:/resource/";
+
+    @Autowired
+    private ComponentStoreProperties componentStoreProperties;
 
     @Override
     public ResponseEntity<Resource> downloadModule(String dynamicsDirection, String moduleType, String resourceType) {
-        log.info("下载模块: 动力学方向 {}, 模块类型 {}, 模块类型 {}", dynamicsDirection, moduleType, resourceType);
+        log.info("下载模块: 动力学方向 {}, 模块类型 {}, 资源类型 {}", dynamicsDirection, moduleType, resourceType);
 
         try {
             String fileName = dynamicsDirection + "_" + moduleType;
 
             // 相对路径
-            String relativePath = dynamicsDirection + "/" + moduleType + "/";
+            // String relativePath = dynamicsDirection + "/" + moduleType + "/";
             // 如果动力学方向为冲击，并且模块类型为求解器，则添加资源类型区别
-            if(dynamicsDirection.equals("冲击") && moduleType.equals("求解器")){
-                relativePath += resourceType + "/";
+            if(dynamicsDirection.equals("impact") && moduleType.equals("solver")){
+                // relativePath += resourceType + "/";
                 fileName += "_" + resourceType;
             }
 
             // 安全路径解析 ———— 防止路径遍历攻击
-            Path basePath = Paths.get(resourcePath).normalize().toAbsolutePath();
+            /*Path basePath = Paths.get(resourcePath).normalize().toAbsolutePath();
             Path resolvedPath = basePath.resolve(relativePath).normalize();
 
             if(!resolvedPath.startsWith(basePath)){
@@ -55,25 +60,45 @@ public class ComponentServiceImpl extends ServiceImpl<ComponentsMapper, Componen
             if(!filePath.toFile().exists()){
                 log.info("文件不存在:{}", filePath);
                 return ResponseEntity.notFound().build();
+            }*/
+
+            // 直接使用映射关系获取安装包路径
+            String installDir = componentStoreProperties.getPath(fileName);
+            if (installDir == null || installDir.isBlank()) {
+                log.info("未知的模块请求或未配置路径: {}", fileName);
+                return ResponseEntity.notFound().build();
+            }
+
+            // 安全路径解析，防止路径遍历并校验文件存在
+            // Path basePath = Paths.get(installDir).normalize().toAbsolutePath();
+            Path filePath = Paths.get(installDir).normalize().toAbsolutePath();
+
+            /*if (!filePath.startsWith(basePath)) {
+                log.warn("检测到潜在的路径遍历攻击: {}", filePath);
+                return ResponseEntity.badRequest().build();
+            }*/
+            if (!filePath.toFile().isFile()) {
+                log.info("文件不存在或不是普通文件: {}", filePath);
+                return ResponseEntity.notFound().build();
             }
 
             Resource resource = new FileSystemResource(filePath);
 
             // 设置响应头（支持中文文件名）
             HttpHeaders headers = new HttpHeaders();
-            String encodedFileName = URLEncoder.encode(fileNameWithExtension, StandardCharsets.UTF_8)
-                    .replace("+", "%20");// 解决中文文件名乱码
+            String encodedFileName = URLEncoder.encode(installDir, StandardCharsets.UTF_8)
+                    .replace("+", "%20");
             headers.add(HttpHeaders.CONTENT_DISPOSITION,
                     "attachment; filename=\"" + encodedFileName + "\"; filename*=UTF-8''" + encodedFileName);
             headers.add(HttpHeaders.CONTENT_TYPE, "application/octet-stream");
 
-            log.info("正在下载模块:{}", filePath);
+            log.info("正在下载前处理/求解器模块:{}", filePath);
             return ResponseEntity.ok()
                     .headers(headers)
                     .contentLength(filePath.toFile().length())
                     .body(resource);
         } catch (Exception e) {
-            log.info("下载模块失败",e);
+            log.info("下载模块失败", e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -82,10 +107,19 @@ public class ComponentServiceImpl extends ServiceImpl<ComponentsMapper, Componen
     public ResponseEntity<Resource> downloadPostprocessingModule() {
         log.info("下载后通用处理模块");
         try {
-            String fileName = "postprocessing.exe";
+            String fileName = "postProcessing";
 
+            /*
             Path resolvedPath = Paths.get(resourcePath).normalize().toAbsolutePath().resolve("后处理/").normalize();
-            Path filePath = resolvedPath.resolve("main.exe");
+            Path filePath = resolvedPath.resolve("main.exe");*/
+
+            String postInstallPath = componentStoreProperties.getPath(fileName);
+
+            if(postInstallPath == null || postInstallPath.isBlank()){
+                log.info("未知的后处理模块请求或未配置路径: {}", fileName);
+                return ResponseEntity.notFound().build();
+            }
+            Path filePath = Paths.get(postInstallPath).normalize().toAbsolutePath();
 
             if(!filePath.toFile().exists()){
                 log.info("文件不存在:{}", filePath);
@@ -102,7 +136,7 @@ public class ComponentServiceImpl extends ServiceImpl<ComponentsMapper, Componen
                     "attachment; filename=\"" + encodedFileName + "\"; filename*=UTF-8''" + encodedFileName);
             headers.add(HttpHeaders.CONTENT_TYPE, "application/octet-stream");
 
-            log.info("正在下载模块:{}", filePath);
+            log.info("正在下载通用后处理模块:{}", filePath);
             return ResponseEntity.ok()
                     .headers(headers)
                     .contentLength(filePath.toFile().length())

@@ -20,11 +20,11 @@ public class ComponentController {
     @GetMapping("/install")
     public ResponseEntity<Resource> installModule(@RequestParam String dynamicsDirection,
                                                   @RequestParam String moduleType,
-                                                  @RequestParam(defaultValue = "CPU") String resourceType){
+                                                  @RequestParam(defaultValue = "cpu") String resourceType){
         return moduleDownloadService.downloadModule(dynamicsDirection, moduleType, resourceType);
     }
 
-    // 下载后处理
+    // 下载通用后处理
     @GetMapping("/install/postprocessing")
     public ResponseEntity<Resource> installPostprocessingModule(){
         return moduleDownloadService.downloadPostprocessingModule();
