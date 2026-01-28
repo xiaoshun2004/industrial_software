@@ -16,19 +16,19 @@ public class ComponentController {
     @Autowired
     private IComponentService moduleDownloadService;
 
-    // 下载前处理和求解器
-    @GetMapping("/install")
-    public ResponseEntity<Resource> installModule(@RequestParam String dynamicsDirection,
-                                                  @RequestParam String moduleType,
-                                                  @RequestParam(defaultValue = "CPU") String resourceType){
-        return moduleDownloadService.downloadModule(dynamicsDirection, moduleType, resourceType);
-    }
-
-    // 下载后处理
-    @GetMapping("/install/postprocessing")
-    public ResponseEntity<Resource> installPostprocessingModule(){
-        return moduleDownloadService.downloadPostprocessingModule();
-    }
+//    // 下载前处理和求解器
+//    @GetMapping("/install")
+//    public ResponseEntity<Resource> installModule(@RequestParam String dynamicsDirection,
+//                                                  @RequestParam String moduleType,
+//                                                  @RequestParam(defaultValue = "CPU") String resourceType){
+//        return moduleDownloadService.downloadModule(dynamicsDirection, moduleType, resourceType);
+//    }
+//
+//    // 下载后处理
+//    @GetMapping("/install/postprocessing")
+//    public ResponseEntity<Resource> installPostprocessingModule(){
+//        return moduleDownloadService.downloadPostprocessingModule();
+//    }
 
     // 获取组件列表
     @GetMapping

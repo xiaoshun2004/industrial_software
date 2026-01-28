@@ -6,9 +6,9 @@ import org.springframework.http.ResponseEntity;
 
 public interface IComponentService {
 
-    public ResponseEntity<Resource> downloadModule(String dynamicsDirection, String moduleType, String resourceType);
-
-    public ResponseEntity<Resource> downloadPostprocessingModule();
+//    public ResponseEntity<Resource> downloadModule(String dynamicsDirection, String moduleType, String resourceType);
+//
+//    public ResponseEntity<Resource> downloadPostprocessingModule();
 
     public ApiResult<?> getModuleList();
 }

@@ -63,7 +63,7 @@ public class ModTasks implements Serializable {
     private String type;
     
     /**
-     * 任务状态（未启动、仿真中、暂停中）
+     * 任务状态（pending、running、paused、waiting、completed）
      */
     private String status;
 

@@ -32,15 +32,52 @@ CREATE TABLE `components` (
   `address` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-INSERT INTO `components` VALUES (1,'冲击前处理程序', '1.0', '2.5MB', '这是冲击前处理程序', '冲击', '前处理', 'CPU','https://www.python.org/ftp/python/pymanager/python-manager-25.2.msi');
-INSERT INTO `components` VALUES (2,'CPU冲击求解器程序', '1.0', '2.6MB', '这是CPU冲击求解器', '冲击', '求解器', 'CPU','https://www.python.org/ftp/python/pymanager/python-manager-25.2.msi');
-INSERT INTO `components` VALUES (3,'GPU冲击求解器程序', '1.0', '2.7MB', '这是GPU冲击求解器', '冲击', '求解器', 'GPU','https://www.python.org/ftp/python/pymanager/python-manager-25.2.msi');
-INSERT INTO `components` VALUES (4,'结构前处理程序', '1.0', '2.8MB', '这是结构前处理程序', '结构', '前处理', 'CPU','https://www.python.org/ftp/python/pymanager/python-manager-25.2.msi');
-INSERT INTO `components` VALUES (5,'结构求解器程序', '1.0', '2.9MB', '这是结构求解器', '结构', '求解器', 'CPU','https://www.python.org/ftp/python/pymanager/python-manager-25.2.msi');
-INSERT INTO `components` VALUES (6,'多体前处理程序', '1.0', '3.0MB', '这是多体前处理程序', '多体', '前处理', 'CPU','https://www.python.org/ftp/python/pymanager/python-manager-25.2.msi');
-INSERT INTO `components` VALUES (7,'多体求解器程序', '1.0', '3.1MB', '这是多体求解器', '多体', '求解器', 'CPU','https://www.python.org/ftp/python/pymanager/python-manager-25.2.msi');
-INSERT INTO `components` VALUES (8,'通用后处理程序', '1.0', '3.2MB', '这是通用后处理程序', '通用', '后处理', 'CPU','https://www.python.org/ftp/python/pymanager/python-manager-25.2.msi');
+INSERT INTO `components` VALUES (1,'冲击前处理程序', '1.0', '2.5MB', '这是冲击前处理程序', '冲击', '前处理', 'CPU','https://drive.google.com/uc?export=download&id=1u3w-tyNbNeFerKcI_Q09jj5WIL0D5gu8');
+INSERT INTO `components` VALUES (2,'CPU冲击求解器程序', '1.0', '2.6MB', '这是CPU冲击求解器', '冲击', '求解器', 'CPU','https://drive.google.com/uc?export=download&id=1u3w-tyNbNeFerKcI_Q09jj5WIL0D5gu8');
+INSERT INTO `components` VALUES (3,'GPU冲击求解器程序', '1.0', '2.7MB', '这是GPU冲击求解器', '冲击', '求解器', 'GPU','https://drive.google.com/uc?export=download&id=1u3w-tyNbNeFerKcI_Q09jj5WIL0D5gu8');
+INSERT INTO `components` VALUES (4,'结构前处理程序', '1.0', '2.8MB', '这是结构前处理程序', '结构', '前处理', 'CPU','https://drive.google.com/uc?export=download&id=1u3w-tyNbNeFerKcI_Q09jj5WIL0D5gu8');
+INSERT INTO `components` VALUES (5,'结构求解器程序', '1.0', '2.9MB', '这是结构求解器', '结构', '求解器', 'CPU','https://drive.google.com/uc?export=download&id=1u3w-tyNbNeFerKcI_Q09jj5WIL0D5gu8');
+INSERT INTO `components` VALUES (6,'多体前处理程序', '1.0', '3.0MB', '这是多体前处理程序', '多体', '前处理', 'CPU','https://drive.google.com/uc?export=download&id=1u3w-tyNbNeFerKcI_Q09jj5WIL0D5gu8');
+INSERT INTO `components` VALUES (7,'多体求解器程序', '1.0', '3.1MB', '这是多体求解器', '多体', '求解器', 'CPU','https://drive.google.com/uc?export=download&id=1u3w-tyNbNeFerKcI_Q09jj5WIL0D5gu8');
+INSERT INTO `components` VALUES (8,'通用后处理程序', '1.0', '3.2MB', '这是通用后处理程序', '通用', '后处理', 'CPU','https://drive.google.com/uc?export=download&id=1u3w-tyNbNeFerKcI_Q09jj5WIL0D5gu8');
 
+
+-- ----------------------------
+-- Table structure for server
+-- ----------------------------
+DROP TABLE IF EXISTS `server`;
+CREATE TABLE `server` (
+                          `id` int NOT NULL AUTO_INCREMENT,
+                          `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                          `ip` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                          `type` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                          `status` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                          `cpu_cores` int NOT NULL,
+                          `memory` int NOT NULL COMMENT '(GB)',
+                          `cpu_usage` int NOT NULL COMMENT '(%)',
+                          `memory_usage` int NOT NULL COMMENT '(%)',
+                          `last_online` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                          PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ----------------------------
+-- Table structure for task
+-- ----------------------------
+DROP TABLE IF EXISTS `task`;
+CREATE TABLE `task` (
+                        `id` int NOT NULL AUTO_INCREMENT,
+                        `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                        `server_id` int NOT NULL,
+                        `server_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                        `type` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                        `priority` int NOT NULL COMMENT '高=1，中=2，低=3',
+                        `cpu_core_need` int NOT NULL,
+                        `memory_need` int NOT NULL,
+                        `progress` int NOT NULL COMMENT '执行进度(%)',
+                        `status` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                        `start_time` datetime NOT NULL,
+                        PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------
 -- Table structure for file_meta

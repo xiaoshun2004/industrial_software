@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.scut.industrial_software.mapper.MonitorServerMapper">
+    <select id="selectServerPage" resultType="com.scut.industrial_software.model.entity.Server">
+    SELECT
+        s.id,
+        s.name,
+        s.ip,
+        s.type,
+        s.status,
+        s.cpu_cores AS cpuCores,
+        s.memory,
+        s.cpu_usage AS cpuUsage,
+        s.memory_usage AS memoryUsage,
+        s.last_online AS lastOnline
+    FROM server s
+    <if test="keyword != null and keyword != ''">
+        AND (
+            s.name LIKE CONCAT('%', #{keyword}, '%')
+        )
+    </if>
+    <if test="status != null and status != ''">
+        AND (
+        s.status = #{status}
+        )
+    </if>
+    <if test="type != null and type != ''">
+        AND (
+        s.type = #{type}
+        )
+    </if>
+    ORDER BY s.last_online DESC
+    </select>
+</mapper>
