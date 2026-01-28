@@ -32,7 +32,7 @@ public class ApiResult<T> implements Serializable {
     private String message;
 
     /**
-     * 全参
+     * 通用响应结构全参
      *
      * @param code    业务状态码
      * @param message 描述

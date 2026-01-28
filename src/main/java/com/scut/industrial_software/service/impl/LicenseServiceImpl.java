@@ -73,7 +73,7 @@ public class LicenseServiceImpl implements ILicenseService {
                     licenseResultMapper.deactivateByUserIdAndToolType(userId, toolType);
                 }
             }
-            // 4. 调用工具执行证书生成逻辑并保存进数据库，返回给前端
+            // 3. 调用工具执行证书生成逻辑并保存进数据库，返回给前端
             return generateAndPersistLicense(toolType, userId);
         } finally {
             if (locked) {

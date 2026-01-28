@@ -15,7 +15,7 @@ spring:
   datasource:
     url: jdbc:mysql://127.0.0.1:3306/industrial_software?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: root
-    password: 123321
+    password: YOUR_PASSWORD
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -30,7 +30,7 @@ spring:
     redis:
       host: localhost
       port: 6379
-      # password: "123456"
+      password: YOUR_PASSWORD
       lettuce:
         pool:
           max-active: 10
@@ -65,48 +65,48 @@ ali:
 
 files:
   upload:
-    path: E:/data/files/
+    path: YOUR_UPLOAD_PATH
 
 # 平台证书生成的相关配置（暂不需要管）
 ptc:
   license:
     # 公钥别称
-    public-alias: publicCert
+    public-alias: YOUR_PUBLIC_ALIAS
     # 访问公钥库的密码
-    store-pass: good
+    store-pass: YOUR_STORE_PASSWORD
     # 证书生成路径
-    license-path: D:/Project/Java/license/generated
+    license-path: YOUR_LICENSE_PATH
     # 公钥库存储路径
-    public-keys-store-path: classpath:license/publicCerts.keystore
+    public-keys-store-path: YOUR_STORE_PATH
     # 私钥别称
-    private-alias: privateCert
+    private-alias: YOUR_PRIVATE_ALIAS
     # 私钥密码（需妥善保管）
-    key-pass: good
+    key-pass: YOUR_STORE_PASSWORD
     # 私钥库存储路径
-    private-keys-store-path: classpath:license/privateKeys.keystore
+    private-keys-store-path: YOUR_STORE_PATH
     # 是否开启license验证服务器系统信息
     verify-system-switch: true
 
 # 证书生成配置
 license:
   store:
-    key-store-path: D:\Project\Java\industrial_software\src\main\resources\keystore.p12   # 平台配置暂时不需要管
-    key-store-type: PKCS12     # 平台配置暂时不需要管
-    key-store-password: Ming   # 平台配置暂时不需要管
+    key-store-path: YOUR_STORE_PATH   # 平台配置暂时不需要管
+    key-store-type: YOUR_STORE_TYPE     # 平台配置暂时不需要管
+    key-store-password: YOUR_STORE_PASSWORD   # 平台配置暂时不需要管
     # 第三方证书生成工具的地址
-    impact-solver-store-path: E:/data/files/
-    impact-treatment-store-path: E:/data/files/
-    multiple-treatment-store-path: E:/data/files/
-    structure-store-path: E:/data/files/
+    impact-solver-store-path: YOUR_STORE_PATH
+    impact-treatment-store-path: YOUR_STORE_PATH
+    multiple-treatment-store-path: YOUR_STORE_PATH
+    structure-store-path: YOUR_STORE_PATH
 
 # 组件安装包存储位置
 component:
   store:
-    impact_preTreatment: D:/component/impact/pre-treatment/
-    impact_solver_cpu: D:/Project/Java/industrial_software_extra/bin.rar
-    impact_solver_gpu: D:/component/impact/solver/gpu/
-    structure_preTreatment: D:/Project/Java/industrial_software_extra/PERA SIM Mechanical 2025-2025-12-16.exe
-    structure_solver: D:/component/structure/solver/
-    multipleBody_preTreatment: D:/component/multibody/pre-treatment/
-    multipleBody_solver: D:/component/multibody/solver/
-    postProcessing: D:/component/post-processing/
+    impact_preTreatment: YOUR_STORE_PATH
+    impact_solver_cpu: YOUR_STORE_PATH
+    impact_solver_gpu: YOUR_STORE_PATH
+    structure_preTreatment: YOUR_STORE_PATH
+    structure_solver: YOUR_STORE_PATH
+    multipleBody_preTreatment: YOUR_STORE_PATH
+    multipleBody_solver: YOUR_STORE_PATH
+    postProcessing: YOUR_STORE_PATH
