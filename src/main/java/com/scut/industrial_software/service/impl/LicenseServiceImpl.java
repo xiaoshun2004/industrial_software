@@ -1,8 +1,12 @@
 package com.scut.industrial_software.service.impl;
 
 import com.scut.industrial_software.common.api.ApiResult;
+import com.scut.industrial_software.mapper.LicenseApplyMapper;
 import com.scut.industrial_software.mapper.LicenseResultMapper;
+import com.scut.industrial_software.model.dto.LicenseApplyDTO;
+import com.scut.industrial_software.model.dto.UserDTO;
 import com.scut.industrial_software.model.constant.RedisConstants;
+import com.scut.industrial_software.model.entity.license.LicenseApply;
 import com.scut.industrial_software.model.entity.license.LicenseResult;
 import com.scut.industrial_software.model.entity.license.LicenseResultInfo;
 import com.scut.industrial_software.model.vo.LicenseResultVO;
@@ -22,6 +26,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static com.baomidou.mybatisplus.extension.toolkit.Db.save;
@@ -36,9 +43,17 @@ public class LicenseServiceImpl implements ILicenseService {
     private LicenseResultMapper licenseResultMapper;
 
     @Autowired
+    private LicenseApplyMapper licenseApplyMapper;
+
+    @Autowired
     private RedissonClient redissonClient;
 
     private static final Logger log = LoggerFactory.getLogger(LicenseServiceImpl.class);
+
+    private static final DateTimeFormatter FALLBACK_DATETIME_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
     @Override
     // 向客户端返回生成的License文件路径和密钥
@@ -164,6 +179,62 @@ public class LicenseServiceImpl implements ILicenseService {
             throw new IOException("License file is not readable: " + path);
         }
         return Files.readAllBytes(file.toPath());
+    }
+
+    @Override
+    public ApiResult<?> approveLicense(LicenseApplyDTO licenseApplyDTO) {
+        if (licenseApplyDTO == null) {
+            return ApiResult.failed("申请数据不能为空");
+        }
+        UserDTO currentUser = UserHolder.getUser();
+        if (currentUser == null) {
+            return ApiResult.failed("未登录用户无法申请证书");
+        }
+        LocalDateTime validFrom;
+        LocalDateTime validTo;
+        try {
+            validFrom = parseDateTime(licenseApplyDTO.getValidFrom(), "validFrom");
+            validTo = parseDateTime(licenseApplyDTO.getValidTo(), "validTo");
+        } catch (IllegalArgumentException ex) {
+            log.warn("License apply datetime parse error: {}", ex.getMessage());
+            return ApiResult.failed(ex.getMessage());
+        }
+        LicenseApply entity = new LicenseApply();
+        entity.setApplyId(generateApplyId());
+        entity.setMacAddress(licenseApplyDTO.getMacAddress());
+        entity.setCategoryId(licenseApplyDTO.getCategoryId());
+        entity.setModuleId(licenseApplyDTO.getModuleId());
+        entity.setCustomerName(licenseApplyDTO.getCustomerName());
+        entity.setUsageCount(licenseApplyDTO.getUsageCount());
+        entity.setValidFrom(validFrom);
+        entity.setValidTo(validTo);
+        entity.setStatus("PENDING");
+        entity.setCreatedAt(LocalDateTime.now());
+        entity.setUserName(currentUser.getName());
+        int inserted = licenseApplyMapper.insert(entity);
+        if (inserted <= 0) {
+            return ApiResult.failed("证书申请保存失败");
+        }
+        return ApiResult.success(entity.getApplyId());
+    }
+
+    private String generateApplyId() {
+        return "req-" + UUID.randomUUID();
+    }
+
+    private LocalDateTime parseDateTime(String source, String fieldName) {
+        if (source == null || source.isBlank()) {
+            throw new IllegalArgumentException(fieldName + "不能为空");
+        }
+        try {
+            return LocalDateTime.parse(source, ISO_FORMATTER);
+        } catch (DateTimeParseException ignored) {
+            try {
+                return LocalDateTime.parse(source, FALLBACK_DATETIME_FORMATTER);
+            } catch (DateTimeParseException ex) {
+                throw new IllegalArgumentException(fieldName + "格式不正确，期望ISO或yyyy-MM-dd HH:mm:ss", ex);
+            }
+        }
     }
 
 }

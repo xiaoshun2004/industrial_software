@@ -1,12 +1,13 @@
 package com.scut.industrial_software.controller.License;
 
 import com.scut.industrial_software.common.api.ApiResult;
-import com.scut.industrial_software.model.vo.LicenseResultVO;
+import com.scut.industrial_software.model.dto.LicenseApplyDTO;
 import com.scut.industrial_software.service.ILicenseService;
 import io.swagger.annotations.Api;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,4 +27,11 @@ public class LicenseCreatorController {
     public ApiResult<?> createLicense() throws Exception {
         return licenseService.createLicense("Structure");
     }
+
+    @PostMapping("/requests")
+    public ApiResult<?> approveLicense(@RequestBody LicenseApplyDTO dto){
+        return licenseService.approveLicense(dto);
+    }
+
+
 }

@@ -128,6 +128,39 @@ LOCK TABLES `internal_force_solution_attributes` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `license_apply`
+--
+
+DROP TABLE IF EXISTS `license_apply`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `license_apply` (
+  `apply_id` varchar(255) NOT NULL COMMENT '证书申请编号',
+  `mac_address` varchar(32) NOT NULL COMMENT '设备的Mac地址',
+  `status` varchar(32) NOT NULL COMMENT '证书的申请状态',
+  `license_path` varchar(255) DEFAULT NULL COMMENT '证书返回地址',
+  `module_id` varchar(32) NOT NULL COMMENT '模块的名称（冲击、多体、结构）',
+  `category_id` varchar(32) NOT NULL COMMENT '模块功能性标识（前后处理器、求解器）',
+  `valid_from` datetime NOT NULL COMMENT '证书的开始时间',
+  `valid_to` datetime NOT NULL COMMENT '证书到期时间',
+  `usage_count` int DEFAULT NULL COMMENT '证书可使用次数',
+  `created_at` datetime NOT NULL COMMENT '申请创建时间',
+  `user_name` varchar(255) NOT NULL COMMENT '申请人的名称',
+  `customer_name` varchar(255) DEFAULT NULL COMMENT '客户名称（公司）',
+  PRIMARY KEY (`apply_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='证书申请表';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `license_apply`
+--
+
+LOCK TABLES `license_apply` WRITE;
+/*!40000 ALTER TABLE `license_apply` DISABLE KEYS */;
+/*!40000 ALTER TABLE `license_apply` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `license_result_info`
 --
 
@@ -690,4 +723,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-01-26  2:29:54
+-- Dump completed on 2026-02-03  0:33:27
