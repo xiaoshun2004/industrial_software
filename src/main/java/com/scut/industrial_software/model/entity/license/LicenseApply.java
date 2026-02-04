@@ -27,6 +27,8 @@ public class LicenseApply {
 
     private String categoryId;
 
+    private String licenseNo;
+
     private LocalDateTime validFrom;
 
     private LocalDateTime validTo;

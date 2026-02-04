@@ -1,22 +1,23 @@
 package com.scut.industrial_software.service.impl;
 
+import cn.hutool.core.util.IdUtil;
 import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.mapper.LicenseApplyMapper;
 import com.scut.industrial_software.mapper.LicenseResultMapper;
-import com.scut.industrial_software.model.dto.LicenseApplyDTO;
-import com.scut.industrial_software.model.dto.UserDTO;
 import com.scut.industrial_software.model.constant.RedisConstants;
+import com.scut.industrial_software.model.dto.LicenseApplyDTO;
 import com.scut.industrial_software.model.entity.license.LicenseApply;
 import com.scut.industrial_software.model.entity.license.LicenseResult;
 import com.scut.industrial_software.model.entity.license.LicenseResultInfo;
+import com.scut.industrial_software.model.vo.ApplyLicenseVO;
 import com.scut.industrial_software.model.vo.LicenseResultVO;
 import com.scut.industrial_software.service.ILicenseService;
 import com.scut.industrial_software.service.ILicenseStrategy;
-import com.scut.industrial_software.utils.UserHolder;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -25,10 +26,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static com.baomidou.mybatisplus.extension.toolkit.Db.save;
@@ -186,10 +188,12 @@ public class LicenseServiceImpl implements ILicenseService {
         if (licenseApplyDTO == null) {
             return ApiResult.failed("申请数据不能为空");
         }
-        UserDTO currentUser = UserHolder.getUser();
-        if (currentUser == null) {
-            return ApiResult.failed("未登录用户无法申请证书");
-        }
+//        UserDTO currentUser = UserHolder.getUser();
+//        if (currentUser == null) {
+//            return ApiResult.failed("未登录用户无法申请证书");
+//        }
+        Integer testId = 10;
+        String testName = "张三";
         LocalDateTime validFrom;
         LocalDateTime validTo;
         try {
@@ -200,39 +204,67 @@ public class LicenseServiceImpl implements ILicenseService {
             return ApiResult.failed(ex.getMessage());
         }
         LicenseApply entity = new LicenseApply();
-        entity.setApplyId(generateApplyId());
+        /*
+        // 获取当前时间戳
+        long currentTime = System.currentTimeMillis();
+        // 获取证书的模块阶段名
+        String moduleName = licenseApplyDTO.getModuleId();
+        // 定义证书编号生成
+        String licenseNo = moduleName.toUpperCase(Locale.ROOT) + "_" + String.valueOf(currentTime);
+         */
+        entity.setApplyId(generateApplyId(testId));
         entity.setMacAddress(licenseApplyDTO.getMacAddress());
         entity.setCategoryId(licenseApplyDTO.getCategoryId());
         entity.setModuleId(licenseApplyDTO.getModuleId());
+        // entity.setLicenseNo(licenseNo);
         entity.setCustomerName(licenseApplyDTO.getCustomerName());
         entity.setUsageCount(licenseApplyDTO.getUsageCount());
         entity.setValidFrom(validFrom);
         entity.setValidTo(validTo);
         entity.setStatus("PENDING");
         entity.setCreatedAt(LocalDateTime.now());
-        entity.setUserName(currentUser.getName());
+        entity.setUserName(testName);
         int inserted = licenseApplyMapper.insert(entity);
         if (inserted <= 0) {
             return ApiResult.failed("证书申请保存失败");
         }
-        return ApiResult.success(entity.getApplyId());
+        // 这里需要将entity实体对象转换成返回视图对象
+        ApplyLicenseVO applyLicenseVO = new ApplyLicenseVO();
+        BeanUtils.copyProperties(entity, applyLicenseVO);
+        return ApiResult.success(applyLicenseVO);
     }
 
-    private String generateApplyId() {
-        return "req-" + UUID.randomUUID();
+    private String generateApplyId(Integer userId) {
+        // 假设使用雪花算法生成一个 long
+        long snowflakeId = IdUtil.getSnowflake().nextId();
+        // 如果必须返回字符串，建议：业务前缀 + 用户ID后4位 + 雪花ID
+        // 或者直接返回 snowflakeId 的字符串形式
+        return String.format("%d%04d", snowflakeId, userId % 10000);
     }
 
     private LocalDateTime parseDateTime(String source, String fieldName) {
         if (source == null || source.isBlank()) {
             throw new IllegalArgumentException(fieldName + "不能为空");
         }
+
         try {
-            return LocalDateTime.parse(source, ISO_FORMATTER);
-        } catch (DateTimeParseException ignored) {
+            // 如果长度是 10，说明只有日期 (yyyy-MM-dd)
+            if (source.length() == 10) {
+                if(fieldName.equals("validFrom")) {
+                    return LocalDate.parse(source).atStartOfDay();
+                }
+                if(fieldName.equals("validTo")) {
+                    return LocalDate.parse(source).atTime(LocalTime.MAX);
+                }
+            }
+            // 尝试按照 yyyy-MM-dd HH:mm:ss 解析
+            return LocalDateTime.parse(source, FALLBACK_DATETIME_FORMATTER);
+        } catch (DateTimeParseException ex) {
             try {
-                return LocalDateTime.parse(source, FALLBACK_DATETIME_FORMATTER);
-            } catch (DateTimeParseException ex) {
-                throw new IllegalArgumentException(fieldName + "格式不正确，期望ISO或yyyy-MM-dd HH:mm:ss", ex);
+                // 最后尝试 ISO 格式
+                return LocalDateTime.parse(source, ISO_FORMATTER);
+            } catch (DateTimeParseException innerEx) {
+                throw new IllegalArgumentException(fieldName + "格式不正确，期望 yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss", innerEx);
             }
         }
     }

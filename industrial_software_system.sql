@@ -147,6 +147,7 @@ CREATE TABLE `license_apply` (
   `created_at` datetime NOT NULL COMMENT '申请创建时间',
   `user_name` varchar(255) NOT NULL COMMENT '申请人的名称',
   `customer_name` varchar(255) DEFAULT NULL COMMENT '客户名称（公司）',
+  `license_no` varchar(63) DEFAULT NULL COMMENT '证书编号',
   PRIMARY KEY (`apply_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='证书申请表';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -157,6 +158,7 @@ CREATE TABLE `license_apply` (
 
 LOCK TABLES `license_apply` WRITE;
 /*!40000 ALTER TABLE `license_apply` DISABLE KEYS */;
+INSERT INTO `license_apply` VALUES ('20190978549813944320010','3C:52:82:1A:9F:01','PENDING',NULL,'pre-impact','pre','2024-07-01 00:00:00','2025-07-02 00:00:00',120,'2026-02-05 01:16:56','张三','中国广电',NULL);
 /*!40000 ALTER TABLE `license_apply` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -723,4 +725,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-02-03  0:33:27
+-- Dump completed on 2026-02-05  1:18:25
