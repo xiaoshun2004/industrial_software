@@ -135,7 +135,7 @@ DROP TABLE IF EXISTS `license_apply`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `license_apply` (
-  `apply_id` varchar(255) NOT NULL COMMENT '证书申请编号',
+  `request_id` varchar(255) NOT NULL COMMENT '证书申请编号',
   `mac_address` varchar(32) NOT NULL COMMENT '设备的Mac地址',
   `status` varchar(32) NOT NULL COMMENT '证书的申请状态',
   `license_path` varchar(255) DEFAULT NULL COMMENT '证书返回地址',
@@ -148,7 +148,7 @@ CREATE TABLE `license_apply` (
   `user_name` varchar(255) NOT NULL COMMENT '申请人的名称',
   `customer_name` varchar(255) DEFAULT NULL COMMENT '客户名称（公司）',
   `license_no` varchar(63) DEFAULT NULL COMMENT '证书编号',
-  PRIMARY KEY (`apply_id`)
+  PRIMARY KEY (`request_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='证书申请表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -158,7 +158,7 @@ CREATE TABLE `license_apply` (
 
 LOCK TABLES `license_apply` WRITE;
 /*!40000 ALTER TABLE `license_apply` DISABLE KEYS */;
-INSERT INTO `license_apply` VALUES ('20190978549813944320010','3C:52:82:1A:9F:01','PENDING',NULL,'pre-impact','pre','2024-07-01 00:00:00','2025-07-02 00:00:00',120,'2026-02-05 01:16:56','张三','中国广电',NULL);
+INSERT INTO `license_apply` VALUES ('20194298281660620800010','3C:52:82:1A:9F:01','REJECTED',NULL,'pre-impact','pre','2024-07-01 00:00:00','2025-06-30 23:59:59',120,'2026-02-05 23:16:05','张三','中国广电',NULL);
 /*!40000 ALTER TABLE `license_apply` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -725,4 +725,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-02-05  1:18:25
+-- Dump completed on 2026-02-06  1:18:35

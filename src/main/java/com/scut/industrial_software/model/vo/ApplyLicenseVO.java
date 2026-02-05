@@ -16,12 +16,22 @@ public class ApplyLicenseVO {
     /**
      * 证书申请编号
      */
-    private String applyId;
+    private String requestId;
+
+    /**
+     * 申请用户名称
+     */
+    private String userName;
 
     /**
      * 客户公司名称
      */
     private String customerName;
+
+    /**
+     * 申请机器码
+     */
+    private String macAddress;
 
     /**
      * 阶段名称
@@ -32,6 +42,11 @@ public class ApplyLicenseVO {
      * 模块阶段名称
      */
     private String moduleId;
+
+    /**
+     * 证书编号
+     */
+    private String licenseNo;
 
     /**
      * 申请生效时间

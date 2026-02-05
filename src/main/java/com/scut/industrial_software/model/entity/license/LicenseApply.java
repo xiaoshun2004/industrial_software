@@ -14,8 +14,8 @@ import java.time.LocalDateTime;
 @TableName("license_apply")
 public class LicenseApply {
 
-    @TableId(value = "apply_id", type = IdType.INPUT)
-    private String applyId;
+    @TableId(value = "request_id", type = IdType.INPUT)
+    private String requestId;
 
     private String macAddress;
 

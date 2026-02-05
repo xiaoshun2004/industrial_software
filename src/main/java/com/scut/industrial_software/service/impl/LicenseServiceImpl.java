@@ -1,6 +1,7 @@
 package com.scut.industrial_software.service.impl;
 
 import cn.hutool.core.util.IdUtil;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.mapper.LicenseApplyMapper;
 import com.scut.industrial_software.mapper.LicenseResultMapper;
@@ -19,19 +20,30 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static com.baomidou.mybatisplus.extension.toolkit.Db.save;
 
@@ -49,6 +61,9 @@ public class LicenseServiceImpl implements ILicenseService {
 
     @Autowired
     private RedissonClient redissonClient;
+
+    @Value("${license.upload.directory}")
+    private String licenseUploadDir;
 
     private static final Logger log = LoggerFactory.getLogger(LicenseServiceImpl.class);
 
@@ -212,7 +227,7 @@ public class LicenseServiceImpl implements ILicenseService {
         // 定义证书编号生成
         String licenseNo = moduleName.toUpperCase(Locale.ROOT) + "_" + String.valueOf(currentTime);
          */
-        entity.setApplyId(generateApplyId(testId));
+        entity.setRequestId(generateApplyId(testId));
         entity.setMacAddress(licenseApplyDTO.getMacAddress());
         entity.setCategoryId(licenseApplyDTO.getCategoryId());
         entity.setModuleId(licenseApplyDTO.getModuleId());
@@ -250,11 +265,12 @@ public class LicenseServiceImpl implements ILicenseService {
         try {
             // 如果长度是 10，说明只有日期 (yyyy-MM-dd)
             if (source.length() == 10) {
+                LocalDate date = LocalDate.parse(source);
                 if(fieldName.equals("validFrom")) {
-                    return LocalDate.parse(source).atStartOfDay();
+                    return date.atStartOfDay();
                 }
                 if(fieldName.equals("validTo")) {
-                    return LocalDate.parse(source).atTime(LocalTime.MAX);
+                    return date.atStartOfDay().minusSeconds(1);
                 }
             }
             // 尝试按照 yyyy-MM-dd HH:mm:ss 解析
@@ -266,6 +282,154 @@ public class LicenseServiceImpl implements ILicenseService {
             } catch (DateTimeParseException innerEx) {
                 throw new IllegalArgumentException(fieldName + "格式不正确，期望 yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss", innerEx);
             }
+        }
+    }
+
+    @Override
+    public ApiResult<?> getApplyRequests(String moduleKeyword, String status, long page, long size) {
+        Page<LicenseApply> pageParam = new Page<>(Math.max(page, 1), Math.max(size, 1));
+        Page<LicenseApply> applyPage = licenseApplyMapper.selectByModuleAndStatus(pageParam, moduleKeyword, status);
+        if (applyPage == null || applyPage.getRecords().isEmpty()) {
+            Page<ApplyLicenseVO> emptyPage = new Page<>(pageParam.getCurrent(), pageParam.getSize(), 0);
+            emptyPage.setRecords(Collections.emptyList());
+            return ApiResult.success(emptyPage);
+        }
+        List<ApplyLicenseVO> voList = applyPage.getRecords().stream().map(apply -> {
+            ApplyLicenseVO vo = new ApplyLicenseVO();
+            BeanUtils.copyProperties(apply, vo);
+            return vo;
+        }).collect(Collectors.toList());
+        Page<ApplyLicenseVO> voPage = new Page<>(applyPage.getCurrent(), applyPage.getSize(), applyPage.getTotal());
+        voPage.setRecords(voList);
+        return ApiResult.success(voPage);
+    }
+
+    @Override
+    public ApiResult<?> approveApplyRequest(String requestId) {
+        if (requestId == null || requestId.isBlank()) {
+            return ApiResult.failed("申请编号不能为空");
+        }
+        LicenseApply apply = licenseApplyMapper.selectById(requestId);
+        if (apply == null) {
+            return ApiResult.failed("申请记录不存在");
+        }
+        if ("APPROVED".equalsIgnoreCase(apply.getStatus())) {
+            ApplyLicenseVO vo = new ApplyLicenseVO();
+            BeanUtils.copyProperties(apply, vo);
+            return ApiResult.success(vo);
+        }
+        LicenseApply update = new LicenseApply();
+        update.setRequestId(requestId);
+        update.setStatus("APPROVED");
+        int rows = licenseApplyMapper.updateById(update);
+        if (rows <= 0) {
+            return ApiResult.failed("审批更新失败");
+        }
+        apply.setStatus("APPROVED");
+        ApplyLicenseVO vo = new ApplyLicenseVO();
+        BeanUtils.copyProperties(apply, vo);
+        return ApiResult.success(vo);
+    }
+
+    @Override
+    public ApiResult<?> rejectApplyRequest(String requestId) {
+        if (requestId == null || requestId.isBlank()) {
+            return ApiResult.failed("申请编号不能为空");
+        }
+        LicenseApply apply = licenseApplyMapper.selectById(requestId);
+        if (apply == null) {
+            return ApiResult.failed("申请记录不存在");
+        }
+        if ("REJECTED".equalsIgnoreCase(apply.getStatus())) {
+            ApplyLicenseVO vo = new ApplyLicenseVO();
+            BeanUtils.copyProperties(apply, vo);
+            return ApiResult.success(vo);
+        }
+        LicenseApply update = new LicenseApply();
+        update.setRequestId(requestId);
+        update.setStatus("REJECTED");
+        int rows = licenseApplyMapper.updateById(update);
+        if (rows <= 0) {
+            return ApiResult.failed("拒绝申请失败");
+        }
+        apply.setStatus("REJECTED");
+        ApplyLicenseVO vo = new ApplyLicenseVO();
+        BeanUtils.copyProperties(apply, vo);
+        return ApiResult.success(vo);
+    }
+
+    @Override
+    public ApiResult<?> uploadLicenseFile(String requestId, MultipartFile file) {
+        if (requestId == null || requestId.isBlank()) {
+            return ApiResult.failed("申请编号不能为空");
+        }
+        if (file == null || file.isEmpty()) {
+            return ApiResult.failed("上传文件不能为空");
+        }
+        LicenseApply apply = licenseApplyMapper.selectById(requestId);
+        if (apply == null) {
+            return ApiResult.failed("申请记录不存在");
+        }
+        if (!StringUtils.hasText(licenseUploadDir)) {
+            return ApiResult.failed("未配置证书上传目录");
+        }
+        try {
+            Path baseDir = Paths.get(licenseUploadDir).toAbsolutePath().normalize();
+            Files.createDirectories(baseDir);
+            String originalFilename = StringUtils.cleanPath(file.getOriginalFilename() == null ? "license.lic" : file.getOriginalFilename());
+            String extension = originalFilename.contains(".") ? originalFilename.substring(originalFilename.lastIndexOf('.')) : ".lic";
+            String uniqueFileName = "license_" + IdUtil.getSnowflake().nextId() + extension;
+            Path targetPath = baseDir.resolve(uniqueFileName).normalize();
+            if (!targetPath.startsWith(baseDir)) {
+                return ApiResult.failed("非法的文件路径");
+            }
+            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+            String licenseNo = "LIC-" + IdUtil.getSnowflake().nextId();
+            int rows = licenseApplyMapper.updateLicenseFileInfo(requestId, licenseNo, targetPath.toString());
+            if (rows <= 0) {
+                return ApiResult.failed("更新证书信息失败");
+            }
+            apply.setLicenseNo(licenseNo);
+            apply.setLicensePath(targetPath.toString());
+            ApplyLicenseVO vo = new ApplyLicenseVO();
+            BeanUtils.copyProperties(apply, vo);
+            return ApiResult.success(vo);
+        } catch (IOException ex) {
+            log.error("保存证书文件失败", ex);
+            return ApiResult.failed("证书文件保存失败: " + ex.getMessage());
+        }
+    }
+
+    @Override
+    public ResponseEntity<byte[]> downloadLicenseFile(String requestId) {
+        if (!StringUtils.hasText(requestId)) {
+            return ResponseEntity.badRequest().build();
+        }
+        LicenseApply apply = licenseApplyMapper.selectById(requestId);
+        if (apply == null || !StringUtils.hasText(apply.getLicensePath())) {
+            return ResponseEntity.notFound().build();
+        }
+        try {
+            Path filePath = Paths.get(apply.getLicensePath()).normalize().toAbsolutePath();
+            if (!Files.exists(filePath) || !Files.isRegularFile(filePath) || !Files.isReadable(filePath)) {
+                return ResponseEntity.notFound().build();
+            }
+            if (StringUtils.hasText(licenseUploadDir)) {
+                Path baseDir = Paths.get(licenseUploadDir).toAbsolutePath().normalize();
+                if (!filePath.startsWith(baseDir)) {
+                    log.warn("Denied download due to path escaping base dir: {}", filePath);
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+                }
+            }
+            byte[] data = Files.readAllBytes(filePath);
+            String filename = filePath.getFileName().toString();
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(data);
+        } catch (IOException ex) {
+            log.error("读取证书文件失败", ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
