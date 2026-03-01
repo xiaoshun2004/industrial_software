@@ -98,6 +98,8 @@ license:
     impact-treatment-store-path: E:/data/files/
     multiple-treatment-store-path: E:/data/files/
     structure-store-path: E:/data/files/
+  upload:
+    directory: YOUR_LICENSE_UPLOAD_PATH
 
 # 组件安装包存储位置
 component:
