@@ -98,7 +98,7 @@ license:
     impact-treatment-store-path: YOUR_STORE_PATH
     multiple-treatment-store-path: YOUR_STORE_PATH
     structure-store-path: YOUR_STORE_PATH
-   upload:
+  upload:
     directory: YOUR_LICENSE_UPLOAD_PATH
 
 # 组件安装包存储位置
