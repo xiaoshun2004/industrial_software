@@ -625,7 +625,9 @@ CREATE TABLE `server` (
   `type` varchar(16) DEFAULT NULL COMMENT '服务器类型',
   `status` varchar(16) NOT NULL COMMENT '服务器状态',
   `cpu_cores` int DEFAULT NULL COMMENT '服务器CPU核心数',
-  `memory` int DEFAULT NULL COMMENT '服务器内存容量(GB)',
+  `memory` int NOT NULL COMMENT '(GB)',
+  `cpu_usage` int NOT NULL COMMENT '(%)',
+  `memory_usage` int NOT NULL COMMENT '(%)',
   `last_online` datetime DEFAULT NULL COMMENT '服务器最近一次上线时间',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='服务器集群表';
