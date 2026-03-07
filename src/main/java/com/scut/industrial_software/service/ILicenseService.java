@@ -61,4 +61,13 @@ public interface ILicenseService {
      */
     ResponseEntity<byte[]> downloadLicenseFile(String requestId);
 
+    /**
+     * 根据用户ID查询证书申请记录，支持分页。
+     * @param userId 用户ID
+     * @param page 当前页，从1开始
+     * @param size 每页大小
+     * @return 查询结果
+     */
+    ApiResult<?> getApplyRequestsByUserId(Integer userId, long page, long size);
+
 }

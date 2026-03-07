@@ -16,6 +16,7 @@
         <result property="createdAt" column="created_at" />
         <result property="userName" column="user_name" />
         <result property="customerName" column="customer_name" />
+        <result property="userId" column="user_id" />
     </resultMap>
 
     <select id="selectByModuleAndStatus"
@@ -54,5 +55,28 @@
             license_path = #{licensePath}
         WHERE request_id = #{requestId}
     </update>
+
+    <select id="selectByUserId"
+            resultMap="LicenseApplyResultMap"
+            parameterType="map">
+        SELECT
+            request_id,
+            mac_address,
+            status,
+            license_path,
+            module_id,
+            category_id,
+            license_no,
+            valid_from,
+            valid_to,
+            usage_count,
+            created_at,
+            user_name,
+            customer_name,
+            user_id
+        FROM license_apply
+        WHERE user_id = #{userId}
+        ORDER BY created_at DESC
+    </select>
 
 </mapper>

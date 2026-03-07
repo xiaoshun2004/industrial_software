@@ -148,7 +148,9 @@ CREATE TABLE `license_apply` (
   `user_name` varchar(255) NOT NULL COMMENT '申请人的名称',
   `customer_name` varchar(255) DEFAULT NULL COMMENT '客户名称（公司）',
   `license_no` varchar(63) DEFAULT NULL COMMENT '证书编号',
-  PRIMARY KEY (`request_id`)
+  `user_id` int NOT NULL COMMENT '证书关联的用户ID',
+  PRIMARY KEY (`request_id`),
+  KEY `license_apply_user_id_index` (`user_id`) COMMENT '证书关联用户索引'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='证书申请表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -158,7 +160,7 @@ CREATE TABLE `license_apply` (
 
 LOCK TABLES `license_apply` WRITE;
 /*!40000 ALTER TABLE `license_apply` DISABLE KEYS */;
-INSERT INTO `license_apply` VALUES ('20194298281660620800010','3C:52:82:1A:9F:01','REJECTED',NULL,'pre-impact','pre','2024-07-01 00:00:00','2025-06-30 23:59:59',120,'2026-02-05 23:16:05','张三','中国广电',NULL);
+INSERT INTO `license_apply` VALUES ('20303441803563458560020','04:A2:06:DD:14:23','APPROVED','D:\\Project\\Java\\license\\uploads\\license_2030344990561660928.lic','solver-struct','solver','2026-03-24 00:00:00','2026-05-29 23:59:59',5,'2026-03-08 02:05:49','张三','Ming','LIC-2030344990645547008',20);
 /*!40000 ALTER TABLE `license_apply` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -519,7 +521,7 @@ CREATE TABLE `mod_users` (
 
 LOCK TABLES `mod_users` WRITE;
 /*!40000 ALTER TABLE `mod_users` DISABLE KEYS */;
-INSERT INTO `mod_users` VALUES (20,'张三','$2a$10$dqG1yMAPgUfuhHcmGFnw3e9EjXBaaFN6bxeIypzf9dLZTkpUBta2i',0,'13726139710',0,1);
+INSERT INTO `mod_users` VALUES (20,'张三','$2a$10$dqG1yMAPgUfuhHcmGFnw3e9EjXBaaFN6bxeIypzf9dLZTkpUBta2i',1,'13726139710',0,1);
 /*!40000 ALTER TABLE `mod_users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -727,4 +729,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-02-06  1:18:35
+-- Dump completed on 2026-03-08  2:43:21

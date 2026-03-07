@@ -33,4 +33,12 @@ public interface LicenseApplyMapper extends BaseMapper<LicenseApply> {
     int updateLicenseFileInfo(@Param("requestId") String requestId,
                               @Param("licenseNo") String licenseNo,
                               @Param("licensePath") String licensePath);
+
+    /**
+     * 根据用户ID分页查询证书申请记录。
+     * @param page 分页参数
+     * @param userId 用户ID
+     * @return 该用户的申请记录列表
+     */
+    Page<LicenseApply> selectByUserId(Page<LicenseApply> page, @Param("userId") Integer userId);
 }
