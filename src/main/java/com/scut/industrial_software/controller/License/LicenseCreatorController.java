@@ -87,6 +87,12 @@ public class LicenseCreatorController {
         return licenseService.downloadLicenseFile(requestId);
     }
 
-
+    // 根据用户ID查询证书申请记录
+    @GetMapping("/requests/user/{userId}")
+    public ApiResult<?> getApplyRequestsByUserId(@PathVariable Integer userId,
+                                                 @RequestParam(defaultValue = "1") Integer page,
+                                                 @RequestParam(defaultValue = "10") Integer size){
+        return licenseService.getApplyRequestsByUserId(userId, page, size);
+    }
 
 }

@@ -7,6 +7,7 @@ import com.scut.industrial_software.mapper.LicenseApplyMapper;
 import com.scut.industrial_software.mapper.LicenseResultMapper;
 import com.scut.industrial_software.model.constant.RedisConstants;
 import com.scut.industrial_software.model.dto.LicenseApplyDTO;
+import com.scut.industrial_software.model.dto.UserDTO;
 import com.scut.industrial_software.model.entity.license.LicenseApply;
 import com.scut.industrial_software.model.entity.license.LicenseResult;
 import com.scut.industrial_software.model.entity.license.LicenseResultInfo;
@@ -14,6 +15,7 @@ import com.scut.industrial_software.model.vo.ApplyLicenseVO;
 import com.scut.industrial_software.model.vo.LicenseResultVO;
 import com.scut.industrial_software.service.ILicenseService;
 import com.scut.industrial_software.service.ILicenseStrategy;
+import com.scut.industrial_software.utils.UserHolder;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
@@ -78,8 +80,7 @@ public class LicenseServiceImpl implements ILicenseService {
         // 1. 生成证书时的幂等性设计，保证同一用户同一工具类型在同一时间只能生成一份证书，这里使用Redisson分布式锁实现
         // 1.ps01 这里采用Redisson的分布式锁的原因在于，因为调用第三方库生成证书可能时间比较长，如果使用普通的Redis分布式锁可能会因为锁过期而导致证书重复生成的问题
         // 1.1 获取当前用户ID
-        // Integer userId = UserHolder.getUser().getId();
-        Integer userId = 20; // TODO: 目前先写死，后续集成用户模块后放开，当前为了方便测试
+        Integer userId = UserHolder.getUser().getId();
         String lockKey = RedisConstants.TOOL_LICENSE_KEY_PREFIX + userId + ":" + toolType;
         RLock lock = redissonClient.getLock(lockKey);
         boolean locked = false;
@@ -203,12 +204,16 @@ public class LicenseServiceImpl implements ILicenseService {
         if (licenseApplyDTO == null) {
             return ApiResult.failed("申请数据不能为空");
         }
-//        UserDTO currentUser = UserHolder.getUser();
-//        if (currentUser == null) {
-//            return ApiResult.failed("未登录用户无法申请证书");
-//        }
-        Integer testId = 10;
-        String testName = "张三";
+        UserDTO currentUser = UserHolder.getUser();
+        if (currentUser == null) {
+            return ApiResult.failed("未登录用户无法申请证书");
+        }
+        /*
+        Integer userId = 20;
+        String userName = "张三";
+        */
+        Integer userId = currentUser.getId();
+        String userName = currentUser.getName();
         LocalDateTime validFrom;
         LocalDateTime validTo;
         try {
@@ -226,27 +231,30 @@ public class LicenseServiceImpl implements ILicenseService {
         String moduleName = licenseApplyDTO.getModuleId();
         // 定义证书编号生成
         String licenseNo = moduleName.toUpperCase(Locale.ROOT) + "_" + String.valueOf(currentTime);
-         */
-        entity.setRequestId(generateApplyId(testId));
+        */
+        entity.setRequestId(generateApplyId(userId));
         entity.setMacAddress(licenseApplyDTO.getMacAddress());
         entity.setCategoryId(licenseApplyDTO.getCategoryId());
         entity.setModuleId(licenseApplyDTO.getModuleId());
-        // entity.setLicenseNo(licenseNo);
         entity.setCustomerName(licenseApplyDTO.getCustomerName());
         entity.setUsageCount(licenseApplyDTO.getUsageCount());
         entity.setValidFrom(validFrom);
         entity.setValidTo(validTo);
         entity.setStatus("PENDING");
         entity.setCreatedAt(LocalDateTime.now());
-        entity.setUserName(testName);
+        entity.setUserName(userName);
+        entity.setUserId(userId);
         int inserted = licenseApplyMapper.insert(entity);
         if (inserted <= 0) {
             return ApiResult.failed("证书申请保存失败");
         }
-        // 这里需要将entity实体对象转换成返回视图对象
-        ApplyLicenseVO applyLicenseVO = new ApplyLicenseVO();
-        BeanUtils.copyProperties(entity, applyLicenseVO);
-        return ApiResult.success(applyLicenseVO);
+        return ApiResult.success(toApplyLicenseVO(entity));
+    }
+
+    private ApplyLicenseVO toApplyLicenseVO(LicenseApply apply) {
+        ApplyLicenseVO vo = new ApplyLicenseVO();
+        BeanUtils.copyProperties(apply, vo);
+        return vo;
     }
 
     private String generateApplyId(Integer userId) {
@@ -294,11 +302,9 @@ public class LicenseServiceImpl implements ILicenseService {
             emptyPage.setRecords(Collections.emptyList());
             return ApiResult.success(emptyPage);
         }
-        List<ApplyLicenseVO> voList = applyPage.getRecords().stream().map(apply -> {
-            ApplyLicenseVO vo = new ApplyLicenseVO();
-            BeanUtils.copyProperties(apply, vo);
-            return vo;
-        }).collect(Collectors.toList());
+        List<ApplyLicenseVO> voList = applyPage.getRecords().stream()
+                .map(this::toApplyLicenseVO)
+                .collect(Collectors.toList());
         Page<ApplyLicenseVO> voPage = new Page<>(applyPage.getCurrent(), applyPage.getSize(), applyPage.getTotal());
         voPage.setRecords(voList);
         return ApiResult.success(voPage);
@@ -314,9 +320,7 @@ public class LicenseServiceImpl implements ILicenseService {
             return ApiResult.failed("申请记录不存在");
         }
         if ("APPROVED".equalsIgnoreCase(apply.getStatus())) {
-            ApplyLicenseVO vo = new ApplyLicenseVO();
-            BeanUtils.copyProperties(apply, vo);
-            return ApiResult.success(vo);
+            return ApiResult.success(toApplyLicenseVO(apply));
         }
         LicenseApply update = new LicenseApply();
         update.setRequestId(requestId);
@@ -326,9 +330,7 @@ public class LicenseServiceImpl implements ILicenseService {
             return ApiResult.failed("审批更新失败");
         }
         apply.setStatus("APPROVED");
-        ApplyLicenseVO vo = new ApplyLicenseVO();
-        BeanUtils.copyProperties(apply, vo);
-        return ApiResult.success(vo);
+        return ApiResult.success(toApplyLicenseVO(apply));
     }
 
     @Override
@@ -341,9 +343,7 @@ public class LicenseServiceImpl implements ILicenseService {
             return ApiResult.failed("申请记录不存在");
         }
         if ("REJECTED".equalsIgnoreCase(apply.getStatus())) {
-            ApplyLicenseVO vo = new ApplyLicenseVO();
-            BeanUtils.copyProperties(apply, vo);
-            return ApiResult.success(vo);
+            return ApiResult.success(toApplyLicenseVO(apply));
         }
         LicenseApply update = new LicenseApply();
         update.setRequestId(requestId);
@@ -353,9 +353,7 @@ public class LicenseServiceImpl implements ILicenseService {
             return ApiResult.failed("拒绝申请失败");
         }
         apply.setStatus("REJECTED");
-        ApplyLicenseVO vo = new ApplyLicenseVO();
-        BeanUtils.copyProperties(apply, vo);
-        return ApiResult.success(vo);
+        return ApiResult.success(toApplyLicenseVO(apply));
     }
 
     @Override
@@ -391,9 +389,7 @@ public class LicenseServiceImpl implements ILicenseService {
             }
             apply.setLicenseNo(licenseNo);
             apply.setLicensePath(targetPath.toString());
-            ApplyLicenseVO vo = new ApplyLicenseVO();
-            BeanUtils.copyProperties(apply, vo);
-            return ApiResult.success(vo);
+            return ApiResult.success(toApplyLicenseVO(apply));
         } catch (IOException ex) {
             log.error("保存证书文件失败", ex);
             return ApiResult.failed("证书文件保存失败: " + ex.getMessage());
@@ -431,6 +427,26 @@ public class LicenseServiceImpl implements ILicenseService {
             log.error("读取证书文件失败", ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    @Override
+    public ApiResult<?> getApplyRequestsByUserId(Integer userId, long page, long size) {
+        if (userId == null) {
+            return ApiResult.failed("用户ID不能为空");
+        }
+        Page<LicenseApply> pageParam = new Page<>(Math.max(page, 1), Math.max(size, 1));
+        Page<LicenseApply> applyPage = licenseApplyMapper.selectByUserId(pageParam, userId);
+        if (applyPage == null || applyPage.getRecords().isEmpty()) {
+            Page<ApplyLicenseVO> emptyPage = new Page<>(pageParam.getCurrent(), pageParam.getSize(), 0);
+            emptyPage.setRecords(Collections.emptyList());
+            return ApiResult.success(emptyPage);
+        }
+        List<ApplyLicenseVO> voList = applyPage.getRecords().stream()
+                .map(this::toApplyLicenseVO)
+                .collect(Collectors.toList());
+        Page<ApplyLicenseVO> voPage = new Page<>(applyPage.getCurrent(), applyPage.getSize(), applyPage.getTotal());
+        voPage.setRecords(voList);
+        return ApiResult.success(voPage);
     }
 
 }

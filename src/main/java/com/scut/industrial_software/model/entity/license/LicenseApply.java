@@ -40,4 +40,6 @@ public class LicenseApply {
     private String userName;
 
     private String customerName;
+
+    private Integer userId;
 }
