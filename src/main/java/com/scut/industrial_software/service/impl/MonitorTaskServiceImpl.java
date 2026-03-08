@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.mapper.MonitorTaskMapper;
+import com.scut.industrial_software.model.dto.MonitorTasksPageRequestDTO;
 import com.scut.industrial_software.model.entity.Task;
 import com.scut.industrial_software.service.IMonitorTaskService;
 import org.springframework.stereotype.Service;
@@ -16,9 +17,9 @@ import java.util.Map;
 @Service
 public class MonitorTaskServiceImpl extends ServiceImpl<MonitorTaskMapper, Task> implements IMonitorTaskService{
     @Override
-    public ApiResult<?> getTasksPage(Integer pageNum, Integer pageSize, String keyword, String status, Integer serverId) {
-        Page<Task> page = new Page<>(pageNum, pageSize);
-        IPage<Task> taskPage = baseMapper.selectTaskPage(page, keyword, status, serverId);
+    public ApiResult<?> getTasksPage(MonitorTasksPageRequestDTO requestDTO) {
+        Page<Task> page = new Page<>(requestDTO.getPageNum(), requestDTO.getPageSize());
+        IPage<Task> taskPage = baseMapper.selectTaskPage(page, requestDTO.getKeyword(), requestDTO.getStatus(), requestDTO.getServerId());
 
         List<Task> tasks = taskPage.getRecords();
 
