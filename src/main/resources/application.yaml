@@ -15,7 +15,7 @@ spring:
   datasource:
     url: jdbc:mysql://127.0.0.1:3306/industrial_software?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: root
-    password: 123321
+    password: zyh101411424
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -112,3 +112,16 @@ component:
     multipleBody_preTreatment: D:/component/multibody/pre-treatment/
     multipleBody_solver: D:/component/multibody/solver/
     postProcessing: D:/component/post-processing/
+
+# 阿里云配置(生产环境不要把密钥放在这里，放在环境变量中，或者放入Nacos/Apollo配置中心中)
+aliyun:
+  ecs:
+#  access-key-id:${ALIYUN_ACCESS_KEY_ID}
+#  access-key-secret:${ALIYUN_ACCESS_KEY_SECRET}
+#  region-id: cn-hangzhou
+    access-key-id:
+    access-key-secret:
+    region-id: cn-hangzhou
+    endpoint: ecs.cn-hangzhou.aliyuncs.com
+    connection-timeout: 5000
+    read-timeout: 10000

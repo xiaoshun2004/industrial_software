@@ -3,7 +3,6 @@ package com.scut.industrial_software.model.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import jakarta.persistence.criteria.CriteriaBuilder;
 import lombok.Data;
 
 @Data
@@ -11,7 +10,7 @@ import lombok.Data;
 public class Server {
 
     /**
-     * 服务器唯一ID
+     * 主键ID
      */
     @TableId(value = "id", type = IdType.AUTO)
     private Integer id;
@@ -27,9 +26,9 @@ public class Server {
     private String ip;
 
     /**
-     * 服务器类型
+     * 服务器规格
      */
-    private String type;
+    private String specification;
 
     /**
      * 服务器状态 （running/idle/offline/maintenance)(运行中/空闲/离线/维护中)
@@ -49,15 +48,11 @@ public class Server {
     /**
      * CPU使用率（百分比）
      */
-    private Integer cpuUsage;
+    private String cpuUsage;
 
     /**
      * 内存使用率（百分比）
      */
-    private Integer memoryUsage;
+    private String memoryUsage;
 
-    /**
-     * 最后一次在线时间（格式: yyyy-MM-dd HH:mm:ss）
-     */
-    private String lastOnline;
 }

@@ -29,6 +29,11 @@ public class MonitorServerController {
         return serverService.adjustServerResources(serverId, cpuCores, memory);
     }
 
+    @PostMapping("/synchronize")
+    public ApiResult<?> synchronizeDatabase(){
+        return serverService.synchronizeDatabase();
+    }
+
     @PostMapping("/allocate")
     public ApiResult<?> allocateResources(@RequestBody Integer[] serverIds){
         return ApiResult.success();

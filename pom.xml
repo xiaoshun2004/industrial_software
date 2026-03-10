@@ -218,6 +218,30 @@
             <artifactId>redisson</artifactId>
             <version>3.13.6</version>
         </dependency>
+        <!-- 阿里云 ECS SDK V2.0 -->
+        <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>ecs20140526</artifactId>
+            <version>8.6.0</version>
+        </dependency>
+        <!-- 阿里云 Cms SDK V2.0 -->
+        <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>cms20190101</artifactId>
+            <version>9.0.8</version>
+        </dependency>
+
+        <!--        <dependency>-->
+<!--            <groupId>com.aliyun</groupId>-->
+<!--            <artifactId>credentials-java</artifactId>-->
+<!--            <version>1.0.3</version>-->
+<!--        </dependency>-->
+<!--        &lt;!&ndash; 阿里云核心库 &ndash;&gt;-->
+<!--        <dependency>-->
+<!--            <groupId>com.aliyun</groupId>-->
+<!--            <artifactId>tea-util</artifactId>-->
+<!--            <version>0.2.12</version>-->
+<!--        </dependency>-->
     </dependencies>
 
     <dependencyManagement>

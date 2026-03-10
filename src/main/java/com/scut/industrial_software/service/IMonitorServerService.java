@@ -9,5 +9,7 @@ public interface IMonitorServerService extends IService<Server> {
 
     ApiResult<?> getServerPage(MonitorServersPageRequestDTO requestDTO);
 
+    ApiResult<?> synchronizeDatabase();
+
     ApiResult<?> adjustServerResources(String serverId, Integer cpuCores, Integer memory);
 }
