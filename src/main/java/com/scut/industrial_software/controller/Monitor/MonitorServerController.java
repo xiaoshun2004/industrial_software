@@ -22,11 +22,16 @@ public class MonitorServerController {
         return serverService.getServerPage(requestDTO);
     }
 
+    @GetMapping("/{serverId}/specifications")
+    public ApiResult<?> getAvailableSpecifications(@PathVariable String serverId) {
+        log.info("获取服务器可调整规格: serverId={}", serverId);
+        return serverService.getAvailableSpecifications(serverId);
+    }
+
     @PutMapping("/{serverId}/resources")
     public ApiResult<?> adjustServerResources(@PathVariable String serverId,
-                                              @RequestParam Integer cpuCores,
-                                              @RequestParam Integer memory){
-        return serverService.adjustServerResources(serverId, cpuCores, memory);
+                                              @RequestParam String specification){
+        return serverService.adjustServerResources(serverId, specification);
     }
 
     @PostMapping("/synchronize")

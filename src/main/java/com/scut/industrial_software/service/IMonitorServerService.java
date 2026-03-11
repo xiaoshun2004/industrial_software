@@ -11,5 +11,7 @@ public interface IMonitorServerService extends IService<Server> {
 
     ApiResult<?> synchronizeDatabase();
 
-    ApiResult<?> adjustServerResources(String serverId, Integer cpuCores, Integer memory);
+    ApiResult<?> getAvailableSpecifications(String serverId);
+
+    ApiResult<?> adjustServerResources(String serverId, String specification);
 }
