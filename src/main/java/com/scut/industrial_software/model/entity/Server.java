@@ -21,6 +21,11 @@ public class Server {
     private String name;
 
     /**
+     * 阿里云实例ID (唯一标识)
+     */
+    private String instanceId;
+
+    /**
      * 服务器IP
      */
     private String ip;

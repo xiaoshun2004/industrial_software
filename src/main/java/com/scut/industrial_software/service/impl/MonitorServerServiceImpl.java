@@ -9,6 +9,7 @@ import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.mapper.MonitorServerMapper;
 import com.scut.industrial_software.model.dto.MonitorServersPageRequestDTO;
 import com.scut.industrial_software.model.entity.Server;
+import com.scut.industrial_software.model.vo.AliEcsSpecificationVO;
 import com.scut.industrial_software.service.IMonitorServerService;
 import com.scut.industrial_software.utils.AliyunEcsUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -41,27 +42,33 @@ public class MonitorServerServiceImpl extends ServiceImpl<MonitorServerMapper, S
             return ApiResult.failed("服务器不存在");
         }
         
-        // 临时方案：先尝试用 server.getName() 作为关键字去阿里云搜一下，获取真正的 InstanceId
-        // 更推荐的方案是：修改 Server 实体，增加 instanceId 字段，同步时保存。
+        // 优先使用 instanceId，如果为空则降级使用 name (兼容旧数据)
+        String realInstanceId = server.getInstanceId();
         
-        try {
-            var allInstances = aliyunEcsUtils.describeAllInstances();
-            String realInstanceId = null;
-            for (var inst : allInstances) {
-                if (inst.getInstanceName() != null && inst.getInstanceName().equals(server.getName())) {
-                    realInstanceId = inst.getInstanceId();
-                    break;
+        if (realInstanceId == null || realInstanceId.isEmpty()) {
+            try {
+                var allInstances = aliyunEcsUtils.describeAllInstances();
+                for (var inst : allInstances) {
+                    if (inst.getInstanceName() != null && inst.getInstanceName().equals(server.getName())) {
+                        realInstanceId = inst.getInstanceId();
+                        // 顺便回填数据库
+                        server.setInstanceId(realInstanceId);
+                        this.updateById(server);
+                        break;
+                    }
                 }
+            } catch (Exception e) {
+                log.error("查询实例列表失败", e);
             }
-            
-            if (realInstanceId == null) {
-                return ApiResult.failed("未在阿里云找到对应的 ECS 实例，请先同步数据库");
-            }
-            
-            // 3. 调用工具类获取可变更规格
-            var specs = aliyunEcsUtils.getAvailableModifications(realInstanceId);
+        }
+        
+        if (realInstanceId == null) {
+            return ApiResult.failed("未在阿里云找到对应的 ECS 实例，请先同步数据");
+        }
+
+        try {
+            List<AliEcsSpecificationVO> specs = aliyunEcsUtils.getAvailableModifications(realInstanceId);
             return ApiResult.success(specs);
-            
         } catch (Exception e) {
             log.error("获取可变更规格失败", e);
             return ApiResult.failed("获取可变更规格失败: " + e.getMessage());
@@ -86,26 +93,29 @@ public class MonitorServerServiceImpl extends ServiceImpl<MonitorServerMapper, S
 
     @Override
     public ApiResult<?> adjustServerResources(String serverId, String specification) {
+        // 1. 根据数据库ID查询服务器实体
         Server server = this.getById(serverId);
         if (server == null) {
             return ApiResult.failed("服务器不存在");
         }
 
-        // 1. 获取真实的阿里云实例ID (同样需要反查)
-        String realInstanceId = null;
-        try {
-            var allInstances = aliyunEcsUtils.describeAllInstances();
-            for (var inst : allInstances) {
-                if (inst.getInstanceName() != null && inst.getInstanceName().equals(server.getName())) {
-                    realInstanceId = inst.getInstanceId();
-                    break;
-                }
-            }
-        } catch (Exception e) {
-            log.error("查询实例信息失败", e);
-            return ApiResult.failed("查询实例信息失败");
-        }
+        String realInstanceId = server.getInstanceId();
         
+        // 兼容旧数据：如果没有 instanceId，尝试通过 name 查找
+        if (realInstanceId == null || realInstanceId.isEmpty()) {
+             try {
+                var allInstances = aliyunEcsUtils.describeAllInstances();
+                for (var inst : allInstances) {
+                    if (inst.getInstanceName() != null && inst.getInstanceName().equals(server.getName())) {
+                        realInstanceId = inst.getInstanceId();
+                        break;
+                    }
+                }
+            } catch (Exception e) {
+                log.error("查询实例列表失败", e);
+            }
+        }
+
         if (realInstanceId == null) {
             return ApiResult.failed("未在阿里云找到对应的 ECS 实例，无法执行变配");
         }
@@ -124,23 +134,15 @@ public class MonitorServerServiceImpl extends ServiceImpl<MonitorServerMapper, S
         // 3. 调用阿里云接口执行变配
         try {
             aliyunEcsUtils.modifyInstanceSpec(realInstanceId, specification);
+            
+            // 4. 更新本地数据库记录（可选，也可以等下次同步）
+            server.setSpecification(specification);
+            this.updateById(server);
+            
+            return ApiResult.success(true);
         } catch (Exception e) {
-            log.error("实例变配失败", e);
-            return ApiResult.failed("实例变配失败: " + e.getMessage());
-        }
-
-        // 3. 更新本地数据库记录 (注意：实际生效可能需要重启实例，这里先更新状态为 '修改中' 或直接更新规格)
-        // 建议：变配后实例状态通常会变，最好让定时任务去同步，或者这里手动触发一次同步
-        // 这里简单更新一下数据库的规格字段，并记录日志
-        server.setSpecification(specification);
-        boolean result = this.updateById(server);
-        
-        if(!result){
-            return ApiResult.failed("阿里云变配请求已提交，但本地数据库更新失败");
-        } else{
-            // 可以在这里触发一次异步同步
-            // synchronizeDatabase(); 
-            return ApiResult.success(true, "变配请求已提交，请稍后刷新查看最新状态");
+            log.error("变配失败", e);
+            return ApiResult.failed("变配失败: " + e.getMessage());
         }
     }
 
@@ -187,8 +189,10 @@ public class MonitorServerServiceImpl extends ServiceImpl<MonitorServerMapper, S
             for (DescribeInstancesResponseBody.DescribeInstancesResponseBodyInstancesInstance instance : instances) {
                 String instanceName = instance.getInstanceName();
                 String instanceId = instance.getInstanceId();
+                String status = instance.getStatus();
+                String rawIp = getServerIp(instance);
                 
-                log.info("正在处理实例: {} ({})", instanceName, instanceId);
+                log.info("同步实例: ID={}, Name={}, Status={}, IP={}", instanceId, instanceName, status, rawIp);
                 
                 // 从批量查询结果中获取监控值
                 Double cpuUsage = cpuMap.getOrDefault(instanceId, 0.0);
@@ -196,16 +200,28 @@ public class MonitorServerServiceImpl extends ServiceImpl<MonitorServerMapper, S
 
                 Server server = convertEcsInstanceToserver(instance, cpuUsage, memUsage);
                 
+                // 优先通过 instanceId 匹配
                 Server existingServer = getBaseMapper().selectOne(
-                        new LambdaQueryWrapper<Server>().eq(Server::getName, instanceName)
+                        new LambdaQueryWrapper<Server>().eq(Server::getInstanceId, instanceId)
                 );
+                
+                // 兼容旧数据：如果没有 instanceId，尝试通过 name 匹配
+                if (existingServer == null) {
+                    existingServer = getBaseMapper().selectOne(
+                            new LambdaQueryWrapper<Server>().eq(Server::getName, instanceName)
+                    );
+                }
 
                 if(existingServer != null){
                     server.setId(existingServer.getId());
-                    getBaseMapper().updateById(server);
-                    log.debug("更新服务器：{}", server.getName());
+                    // 确保 instanceId 也被更新进去
+                    if (existingServer.getInstanceId() == null) {
+                        server.setInstanceId(instanceId);
+                    }
+                    this.updateById(server);
+                    log.info("更新服务器 [ID={}]：Name={}, Status={}, IP={}", existingServer.getId(), server.getName(), server.getStatus(), server.getIp());
                 } else{
-                    getBaseMapper().insert(server);
+                    this.save(server);
                     log.info("新增服务器：{}", server.getName());
                 }
             }
@@ -224,6 +240,7 @@ public class MonitorServerServiceImpl extends ServiceImpl<MonitorServerMapper, S
             Double memoryUsage) {
         
         Server server = new Server();
+        server.setInstanceId(instance.getInstanceId()); // 新增字段
         server.setName(instance.getInstanceName());
         server.setIp(getServerIp(instance));
         server.setSpecification(instance.getInstanceType());
@@ -239,34 +256,43 @@ public class MonitorServerServiceImpl extends ServiceImpl<MonitorServerMapper, S
     }
 
     private String getServerIp(DescribeInstancesResponseBody.DescribeInstancesResponseBodyInstancesInstance instance){
+        String ip = "N/A";
+        
         // 优先获取公网 IP
         if (instance.getPublicIpAddress() != null &&
                 instance.getPublicIpAddress().getIpAddress() != null &&
                 !instance.getPublicIpAddress().getIpAddress().isEmpty()) {
-            return instance.getPublicIpAddress().getIpAddress().get(0);
+            ip = instance.getPublicIpAddress().getIpAddress().get(0);
         }
 
-        // 其次获取 EIP
-        if (instance.getEipAddress() != null &&
-                instance.getEipAddress().getIpAddress() != null) {
-            return instance.getEipAddress().getIpAddress();
+        // 其次获取 EIP (必须不为空字符串)
+        if ("N/A".equals(ip) && instance.getEipAddress() != null &&
+                instance.getEipAddress().getIpAddress() != null &&
+                !instance.getEipAddress().getIpAddress().isEmpty()) {
+            ip = instance.getEipAddress().getIpAddress();
         }
 
-        // 最后获取私网 IP
-        if (instance.getVpcAttributes() != null &&
+        // 获取私网 IP (VPC)
+        if ("N/A".equals(ip) && instance.getVpcAttributes() != null &&
                 instance.getVpcAttributes().getPrivateIpAddress() != null &&
                 instance.getVpcAttributes().getPrivateIpAddress().getIpAddress() != null &&
                 !instance.getVpcAttributes().getPrivateIpAddress().getIpAddress().isEmpty()) {
-            return instance.getVpcAttributes().getPrivateIpAddress().getIpAddress().get(0);
+            ip = instance.getVpcAttributes().getPrivateIpAddress().getIpAddress().get(0);
         }
 
-        if (instance.getInnerIpAddress() != null &&
+        // 获取内网 IP (经典网络)
+        if ("N/A".equals(ip) && instance.getInnerIpAddress() != null &&
                 instance.getInnerIpAddress().getIpAddress() != null &&
                 !instance.getInnerIpAddress().getIpAddress().isEmpty()) {
-            return instance.getInnerIpAddress().getIpAddress().get(0);
+            ip = instance.getInnerIpAddress().getIpAddress().get(0);
+        }
+        
+        // 记录调试日志，方便排查
+        if ("N/A".equals(ip) || "".equals(ip)) {
+            log.warn("实例 {} ({}) 未获取到有效 IP", instance.getInstanceName(), instance.getInstanceId());
         }
 
-        return "N/A";
+        return ip;
     }
 
 }

@@ -48,14 +48,20 @@ public class AliyunEcsUtils {
 
             Config config = new Config();
             config.setCredential(credentialClient);  // 使用 credentialClient
-            config.setEndpoint(aliyunEcsConfig.getEndpoint());
-
+            config.setRegionId(aliyunEcsConfig.getRegionId());
+            String endpoint = aliyunEcsConfig.getEndpoint();
+            if (endpoint != null) {
+                endpoint = endpoint.trim(); // 去除可能的首尾空格
+                config.setEndpoint(endpoint);
+            }
+            
             // 建议添加超时配置
             config.setConnectTimeout(aliyunEcsConfig.getConnectionTimeout());
             config.setReadTimeout(aliyunEcsConfig.getReadTimeout());
 
             this.client = new Client(config);
-            log.info("初始化阿里云ECS客户端成功，endpoint: {}", aliyunEcsConfig.getEndpoint());
+            log.info("初始化阿里云ECS客户端成功，RegionId={}, Endpoint=[{}], Length={}", 
+                    aliyunEcsConfig.getRegionId(), endpoint, (endpoint != null ? endpoint.length() : "null"));
         } catch (Exception e) {
             log.error("初始化阿里云ECS客户端失败", e);
             throw new RuntimeException("初始化阿里云ECS客户端失败", e);
@@ -124,35 +130,6 @@ public class AliyunEcsUtils {
         log.info("成功拉取所有 ECS 实例，共 {} 台", allInstances.size());
         return allInstances;
     }
-
-    // /**
-    //  * 查询ECS实例列表（基础方法，保留兼容性）
-    //  */
-    // public DescribeInstancesResponse describeInstances(Integer pageNum, Integer pageSize) throws Exception {
-    //     DescribeInstancesRequest request = new DescribeInstancesRequest()
-    //             .setRegionId(aliyunEcsConfig.getRegionId())
-    //             .setPageNumber(pageNum != null ? pageNum : 1)
-    //             .setPageSize(pageSize != null ? pageSize : 10);
-
-    //     log.info("查询ECS实例列表, pageNum: {}, pageSize: {}",
-    //             request.getPageNumber(), request.getPageSize());
-
-
-    //     return client.describeInstances(request);
-    // }
-
-    // /**
-    //  * 获取单个实例的指标值（兼容旧代码）
-    //  */
-    // public Double getMetricValue(String instanceId, String metricName) {
-    //     try {
-    //         Map<String, Double> batchValues = getBatchMetricValues(Collections.singletonList(instanceId), metricName);
-    //         return batchValues.get(instanceId);
-    //     } catch (Exception e) {
-    //         log.error("获取单个实例监控指标失败: instanceId={}, metric={}", instanceId, metricName, e);
-    //         return null;
-    //     }
-    // }
 
     /**
      * 批量获取实例监控数据 (优化 N+1 问题)

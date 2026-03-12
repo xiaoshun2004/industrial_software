@@ -4,6 +4,7 @@
     <select id="selectServerPage" resultType="com.scut.industrial_software.model.entity.Server">
     SELECT
         s.id,
+        s.instance_id AS instanceId,
         s.name,
         s.ip,
         s.status,
