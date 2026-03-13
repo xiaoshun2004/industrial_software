@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
-@RequestMapping("/Monitoring/tasks")
+@RequestMapping("/monitoring/tasks")
 public class MonitorTaskController {
 
     @Autowired
@@ -28,8 +28,11 @@ public class MonitorTaskController {
     }
 
     @PutMapping("/{taskId}/priority")
-    public ApiResult<?> updateTaskPriority(@PathVariable String taskId){
-        return ApiResult.success();
+    public ApiResult<?> updateTaskPriority(@PathVariable String taskId,
+                                           @RequestParam Integer priority
+    ){
+        log.info("修改任务优先级: taskId={}, priority={}", taskId, priority);
+        return taskService.updateTaskPriority(taskId, priority);
     }
 
     @PostMapping("/allocate")

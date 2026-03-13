@@ -9,4 +9,6 @@ import com.scut.industrial_software.model.entity.Task;
 public interface IMonitorTaskService extends IService<Task> {
 
     ApiResult<?> getTasksPage(MonitorTasksPageRequestDTO requestDTO);
+
+    ApiResult<?> updateTaskPriority(String taskId, Integer priority);
 }

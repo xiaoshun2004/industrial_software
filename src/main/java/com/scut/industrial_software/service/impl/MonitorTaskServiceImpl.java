@@ -32,4 +32,21 @@ public class MonitorTaskServiceImpl extends ServiceImpl<MonitorTaskMapper, Task>
         return ApiResult.success(result);
 
     }
+
+    @Override
+    public ApiResult<?> updateTaskPriority(String taskId, Integer priority) {
+        Task task = this.getById(taskId);
+        if (task == null) {
+            return ApiResult.failed("任务不存在");
+        }
+        
+        task.setPriority(priority);
+        boolean success = this.updateById(task);
+        
+        if (success) {
+            return ApiResult.success("优先级修改成功");
+        } else {
+            return ApiResult.failed("优先级修改失败");
+        }
+    }
 }

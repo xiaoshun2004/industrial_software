@@ -246,7 +246,15 @@ public class MonitorServerServiceImpl extends ServiceImpl<MonitorServerMapper, S
         server.setSpecification(instance.getInstanceType());
         server.setStatus(instance.getStatus());
         server.setCpuCores(instance.getCpu());
-        server.setMemory(instance.getMemory());
+        
+        // 内存单位转换：阿里云 API 返回的是 MB，数据库存的是 GB (或者如果是MB则直接存，但用户要求转GB)
+        // 假设 instance.getMemory() 返回的是 Integer 类型的 MB 值
+        if (instance.getMemory() != null) {
+            // 将 MB 转换为 GB
+            server.setMemory(instance.getMemory() / 1024);
+        } else {
+            server.setMemory(0);
+        }
 
         // 格式化监控数据
         server.setCpuUsage(cpuUsage > 0 ? String.format("%.2f", cpuUsage) : "N/A");

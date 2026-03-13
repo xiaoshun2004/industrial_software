@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.scut.industrial_software.mapper.MonitorServerMapper">
+<mapper namespace="com.scut.industrial_software.mapper.MonitorTaskMapper">
     <select id="selectTaskPage" resultType="com.scut.industrial_software.model.entity.Task">
     SELECT t.id,
            t.name,
@@ -24,9 +24,9 @@
             t.status = #{status}
         )
     </if>
-    <if test="type != null and type != ''">
+    <if test="serverId != null">
         AND (
-            t.server_id = #{serverID}
+            t.server_id = #{serverId}
         )
     </if>
     ORDER BY t.start_time DESC
