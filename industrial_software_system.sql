@@ -621,18 +621,18 @@ DROP TABLE IF EXISTS `server`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `server` (
-  `id` bigint NOT NULL COMMENT '服务器唯一标识ID',
-  `name` varchar(127) DEFAULT NULL COMMENT '服务器名称',
-  `ip` varchar(40) NOT NULL COMMENT '服务器IP地址',
-  `type` varchar(16) DEFAULT NULL COMMENT '服务器类型',
-  `status` varchar(16) NOT NULL COMMENT '服务器状态',
-  `cpu_cores` int DEFAULT NULL COMMENT '服务器CPU核心数',
-  `memory` int NOT NULL COMMENT '(GB)',
-  `cpu_usage` int NOT NULL COMMENT '(%)',
-  `memory_usage` int NOT NULL COMMENT '(%)',
-  `last_online` datetime DEFAULT NULL COMMENT '服务器最近一次上线时间',
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='服务器集群表';
+`id` int NOT NULL AUTO_INCREMENT,
+`instance_id` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+`name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+`ip` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+`specification` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`status` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+`cpu_cores` int NOT NULL,
+`memory` int NOT NULL COMMENT '(GB)',
+`cpu_usage` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '(%)',
+`memory_usage` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '(%)',
+PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
