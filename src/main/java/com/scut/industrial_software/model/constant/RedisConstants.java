@@ -14,6 +14,12 @@ public class RedisConstants {
     // 工具证书生成的 Redis 键前缀
     public static final String TOOL_LICENSE_KEY_PREFIX = "license:generate:";
 
+    // 记录证书申请表上一次过期更新的时间
+    public static final String LICENSE_LAST_UPDATE = "license:update";
+
+    // 证书申请状态异步刷新的分布式锁
+    public static final String LICENSE_STATUS_REFRESH_LOCK = "license:status:refresh:lock";
+
     // token 的过期时间（30分钟）
     public static final long TOKEN_TTL = 30L;
 

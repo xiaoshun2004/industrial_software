@@ -6,6 +6,8 @@ import com.scut.industrial_software.model.entity.license.LicenseApply;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDateTime;
+
 /**
  * MyBatis-Plus mapper for license_apply table.
  */
@@ -22,6 +24,22 @@ public interface LicenseApplyMapper extends BaseMapper<LicenseApply> {
     Page<LicenseApply> selectByModuleAndStatus(Page<LicenseApply> page,
                                                @Param("moduleKeyword") String moduleKeyword,
                                                @Param("status") String status);
+
+    /**
+     * 将指定时间窗口内已过期但仍为VALID的申请单修正为OVERDUE。
+     * @param startValidTo 起始 valid_to，可为空
+     * @param endValidTo 截止 valid_to
+     * @return 影响行数
+     */
+    int markExpiredValidAsOverdue(@Param("startValidTo") LocalDateTime startValidTo,
+                                  @Param("endValidTo") LocalDateTime endValidTo);
+
+    /**
+     * 查询当前时间之后最早的一条 VALID 记录的过期时间。
+     * @param current 当前时间
+     * @return 下一条待过期记录的 valid_to
+     */
+    LocalDateTime selectNextValidToAfter(@Param("current") LocalDateTime current);
 
     /**
      * 更新证书编号及文件存储路径。

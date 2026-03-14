@@ -44,6 +44,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -62,6 +63,9 @@ public class LicenseServiceImpl implements ILicenseService {
     private LicenseApplyMapper licenseApplyMapper;
 
     @Autowired
+    private LicenseApplyStatusAsyncService licenseApplyStatusAsyncService;
+
+    @Autowired
     private RedissonClient redissonClient;
 
     @Value("${license.upload.directory}")
@@ -73,6 +77,14 @@ public class LicenseServiceImpl implements ILicenseService {
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+
+    private static final String STATUS_VALID = "VALID";
+
+    private static final String STATUS_OVERDUE = "OVERDUE";
+
+    private static final String STATUS_REJECTED = "REJECTED";
+
+    private static final String STATUS_PENDING = "PENDING";
 
     @Override
     // 向客户端返回生成的License文件路径和密钥
@@ -240,7 +252,7 @@ public class LicenseServiceImpl implements ILicenseService {
         entity.setUsageCount(licenseApplyDTO.getUsageCount());
         entity.setValidFrom(validFrom);
         entity.setValidTo(validTo);
-        entity.setStatus("PENDING");
+        entity.setStatus(STATUS_PENDING);
         entity.setCreatedAt(LocalDateTime.now());
         entity.setUserName(userName);
         entity.setUserId(userId);
@@ -278,7 +290,7 @@ public class LicenseServiceImpl implements ILicenseService {
                     return date.atStartOfDay();
                 }
                 if(fieldName.equals("validTo")) {
-                    return date.atStartOfDay().minusSeconds(1);
+                    return date.plusDays(1).atStartOfDay().minusSeconds(1);
                 }
             }
             // 尝试按照 yyyy-MM-dd HH:mm:ss 解析
@@ -295,19 +307,65 @@ public class LicenseServiceImpl implements ILicenseService {
 
     @Override
     public ApiResult<?> getApplyRequests(String moduleKeyword, String status, long page, long size) {
+        String normalizedStatus = normalizeStatus(status);
+        // 异步处理当前时间上过期但字段并未更新的证书
+        triggerExpiredStatusRefresh(normalizedStatus);
         Page<LicenseApply> pageParam = new Page<>(Math.max(page, 1), Math.max(size, 1));
-        Page<LicenseApply> applyPage = licenseApplyMapper.selectByModuleAndStatus(pageParam, moduleKeyword, status);
+        Page<LicenseApply> applyPage = licenseApplyMapper.selectByModuleAndStatus(pageParam, moduleKeyword, normalizedStatus);
         if (applyPage == null || applyPage.getRecords().isEmpty()) {
             Page<ApplyLicenseVO> emptyPage = new Page<>(pageParam.getCurrent(), pageParam.getSize(), 0);
             emptyPage.setRecords(Collections.emptyList());
             return ApiResult.success(emptyPage);
         }
+        LocalDateTime now = LocalDateTime.now();
         List<ApplyLicenseVO> voList = applyPage.getRecords().stream()
+                // projectStatusForView添加双保险，以防异步未正确更新导致错误返回
+                .map(apply -> projectStatusForView(apply, now))
+                .filter(apply -> matchesRequestedStatus(apply, normalizedStatus))
                 .map(this::toApplyLicenseVO)
                 .collect(Collectors.toList());
         Page<ApplyLicenseVO> voPage = new Page<>(applyPage.getCurrent(), applyPage.getSize(), applyPage.getTotal());
         voPage.setRecords(voList);
         return ApiResult.success(voPage);
+    }
+    
+    // 规范化状态字段
+    private String normalizeStatus(String status) {
+        if (!StringUtils.hasText(status)) {
+            return status;
+        }
+        return status.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private void triggerExpiredStatusRefresh(String status) {
+        if (!STATUS_VALID.equals(status) && !STATUS_OVERDUE.equals(status)) {
+            return;
+        }
+        licenseApplyStatusAsyncService.markExpiredValidAsOverdue();
+    }
+
+    private LicenseApply projectStatusForView(LicenseApply apply, LocalDateTime now) {
+        if (apply == null) {
+            return null;
+        }
+        if (STATUS_VALID.equalsIgnoreCase(apply.getStatus()) && isExpired(apply, now)) {
+            apply.setStatus(STATUS_OVERDUE);
+        }
+        return apply;
+    }
+
+    private boolean matchesRequestedStatus(LicenseApply apply, String normalizedStatus) {
+        if (apply == null) {
+            return false;
+        }
+        if (!StringUtils.hasText(normalizedStatus)) {
+            return true;
+        }
+        return normalizedStatus.equalsIgnoreCase(apply.getStatus());
+    }
+
+    private boolean isExpired(LicenseApply apply, LocalDateTime now) {
+        return apply.getValidTo() != null && now.isAfter(apply.getValidTo());
     }
 
     @Override
@@ -319,18 +377,33 @@ public class LicenseServiceImpl implements ILicenseService {
         if (apply == null) {
             return ApiResult.failed("申请记录不存在");
         }
-        if ("APPROVED".equalsIgnoreCase(apply.getStatus())) {
+        String approvedStatus = resolveApprovedStatus(apply);
+        if (approvedStatus.equalsIgnoreCase(apply.getStatus())) {
+            if (STATUS_VALID.equalsIgnoreCase(approvedStatus)) {
+                licenseApplyStatusAsyncService.alignCursorForValidApply(apply.getValidTo());
+            }
             return ApiResult.success(toApplyLicenseVO(apply));
         }
         LicenseApply update = new LicenseApply();
         update.setRequestId(requestId);
-        update.setStatus("APPROVED");
+        update.setStatus(approvedStatus);
         int rows = licenseApplyMapper.updateById(update);
         if (rows <= 0) {
             return ApiResult.failed("审批更新失败");
         }
-        apply.setStatus("APPROVED");
+        apply.setStatus(approvedStatus);
+        if (STATUS_VALID.equalsIgnoreCase(approvedStatus)) {
+            licenseApplyStatusAsyncService.alignCursorForValidApply(apply.getValidTo());
+        }
         return ApiResult.success(toApplyLicenseVO(apply));
+    }
+
+    private String resolveApprovedStatus(LicenseApply apply) {
+        LocalDateTime validTo = apply.getValidTo();
+        if (validTo == null) {
+            return STATUS_VALID;
+        }
+        return LocalDateTime.now().isAfter(validTo) ? STATUS_OVERDUE : STATUS_VALID;
     }
 
     @Override
@@ -342,17 +415,17 @@ public class LicenseServiceImpl implements ILicenseService {
         if (apply == null) {
             return ApiResult.failed("申请记录不存在");
         }
-        if ("REJECTED".equalsIgnoreCase(apply.getStatus())) {
+        if (STATUS_REJECTED.equalsIgnoreCase(apply.getStatus())) {
             return ApiResult.success(toApplyLicenseVO(apply));
         }
         LicenseApply update = new LicenseApply();
         update.setRequestId(requestId);
-        update.setStatus("REJECTED");
+        update.setStatus(STATUS_REJECTED);
         int rows = licenseApplyMapper.updateById(update);
         if (rows <= 0) {
             return ApiResult.failed("拒绝申请失败");
         }
-        apply.setStatus("REJECTED");
+        apply.setStatus(STATUS_REJECTED);
         return ApiResult.success(toApplyLicenseVO(apply));
     }
 

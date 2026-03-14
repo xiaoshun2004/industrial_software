@@ -36,15 +36,30 @@
             usage_count,
             created_at,
             user_name,
-            customer_name
+            customer_name,
+            user_id
         FROM license_apply
         <where>
             <if test="moduleKeyword != null and moduleKeyword != ''">
                 AND module_id LIKE CONCAT('%', #{moduleKeyword}, '%')
             </if>
-            <if test="status != null and status != ''">
-                AND status = #{status}
-            </if>
+            <choose>
+                <when test="status != null and status == 'VALID'">
+                    AND status = 'VALID'
+                    AND (valid_to IS NULL OR valid_to &gt;= NOW())
+                </when>
+                <when test="status != null and status == 'OVERDUE'">
+                    AND (
+                        status = 'OVERDUE'
+                        OR (status = 'VALID' AND valid_to IS NOT NULL AND valid_to &lt; NOW())
+                    )
+                </when>
+                <otherwise>
+                    <if test="status != null and status != ''">
+                        AND status = #{status}
+                    </if>
+                </otherwise>
+            </choose>
         </where>
         ORDER BY created_at DESC
     </select>
@@ -55,6 +70,27 @@
             license_path = #{licensePath}
         WHERE request_id = #{requestId}
     </update>
+
+    <update id="markExpiredValidAsOverdue">
+        UPDATE license_apply
+        SET status = 'OVERDUE'
+        WHERE status = 'VALID'
+          AND valid_to IS NOT NULL
+                    AND valid_to &lt;= #{endValidTo}
+                <if test="startValidTo != null">
+                    AND valid_to &gt;= #{startValidTo}
+        </if>
+    </update>
+
+        <select id="selectNextValidToAfter" resultType="java.time.LocalDateTime">
+                SELECT valid_to
+                FROM license_apply
+                WHERE status = 'VALID'
+                    AND valid_to IS NOT NULL
+                    AND valid_to &gt; #{current}
+                ORDER BY valid_to ASC
+                LIMIT 1
+        </select>
 
     <select id="selectByUserId"
             resultMap="LicenseApplyResultMap"

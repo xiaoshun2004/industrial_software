@@ -35,7 +35,7 @@ public class FilterConfig {
     @Bean
     public FilterRegistrationBean<QuitApiFilter> apifilterRegistrationBean() {
         log.info("-----------------初始化全局API去除过滤器-----------------");
-        // 1. 启动拦截器
+        // 1. 启动过滤器
         FilterRegistrationBean<QuitApiFilter> registration = new FilterRegistrationBean<>();
         registration.setFilter(new QuitApiFilter());
         registration.addUrlPatterns("/*");      // 拦截所有请求
