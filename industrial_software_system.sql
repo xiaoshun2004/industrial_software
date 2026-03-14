@@ -645,6 +645,38 @@ LOCK TABLES `server` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `task`
+--
+DROP TABLE IF EXISTS `task`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `task` (
+`id` int NOT NULL AUTO_INCREMENT,
+`name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+`server_id` int NOT NULL,
+`server_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+`type` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+`priority` int NOT NULL COMMENT '高=1，中=2，低=3',
+`cpu_core_need` int NOT NULL,
+`memory_need` int NOT NULL,
+`progress` int NOT NULL COMMENT '执行进度(%)',
+`status` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+`start_time` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+
+--
+-- Dumping data for table `task`
+--
+
+Lock TABLES `task` WRITE;
+/*!40000 ALTER TABLE `task` DISABLE KEYS */;
+/*!40000 ALTER TABLE `task` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `simulation_data`
 --
 
