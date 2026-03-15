@@ -1,6 +1,5 @@
 package com.scut.industrial_software.model.dto;
 
-import cn.hutool.core.date.DateTime;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -32,6 +31,26 @@ public class ProcessInfoDTO {
     private volatile String status = "running";      // volatile 保证线程间可见性
 
     /**
+     * 执行进度(0-100)
+     */
+    private volatile Integer progress = 0;
+
+    /**
+     * 调度到的服务器ID
+     */
+    private Integer serverId;
+
+    /**
+     * 调度到的服务器名称
+     */
+    private String serverName;
+
+    /**
+     * 失败原因
+     */
+    private String errorMsg;
+
+    /**
      * 进程启动时间
      */
     private LocalDateTime startTime;
@@ -45,17 +64,6 @@ public class ProcessInfoDTO {
         this.process = process;
         this.pid = pid;
         this.startTime = startTime;
-    }
-
-    // 原子性地更新状态
-    public boolean updateStatus(String expectedStatus, String newStatus){
-        synchronized (this){
-            if (this.status.equals(expectedStatus)){
-                this.status = newStatus;
-                return true;
-            }
-            return false;
-        }
     }
 
 }

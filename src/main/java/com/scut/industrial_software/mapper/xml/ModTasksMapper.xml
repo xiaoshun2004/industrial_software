@@ -4,7 +4,7 @@
 
     <!-- 根据项目ID分页查询共享任务 -->
     <select id="selectSharedTasksByPage" resultType="com.scut.industrial_software.model.entity.ModTasks">
-        SELECT 
+        SELECT
             t.task_id,
             t.task_name,
             t.creator AS creatorId,
@@ -14,6 +14,15 @@
             t.type,
             t.compute_resource,
             t.status,
+            t.server_id,
+            t.server_name,
+            t.priority,
+            t.cpu_core_need,
+            t.memory_need,
+            t.progress,
+            t.start_time,
+            t.end_time,
+            t.error_msg,
             u.username AS creator
         FROM mod_tasks t
         LEFT JOIN mod_users u ON t.creator = u.user_id
@@ -27,10 +36,10 @@
         </if>
         ORDER BY t.creation_time DESC
     </select>
-    
+
     <!-- 根据项目ID分页查询私人任务 -->
     <select id="selectPrivateTasksByPage" resultType="com.scut.industrial_software.model.entity.ModTasks">
-        SELECT 
+        SELECT
             t.task_id,
             t.task_name,
             t.creator AS creatorId,
@@ -39,6 +48,16 @@
             t.simulation_stage,
             t.type,
             t.status,
+            t.compute_resource,
+            t.server_id,
+            t.server_name,
+            t.priority,
+            t.cpu_core_need,
+            t.memory_need,
+            t.progress,
+            t.start_time,
+            t.end_time,
+            t.error_msg,
             u.username AS creator
         FROM mod_tasks t
         LEFT JOIN mod_users u ON t.creator = u.user_id
@@ -51,6 +70,99 @@
             )
         </if>
         ORDER BY t.creation_time DESC
+    </select>
+
+    <select id="selectMonitorTasksByPage" resultType="com.scut.industrial_software.model.entity.ModTasks">
+        SELECT
+            t.task_id,
+            t.task_name,
+            t.creator AS creatorId,
+            t.creation_time,
+            t.project_id,
+            t.simulation_stage,
+            t.type,
+            t.status,
+            t.compute_resource,
+            t.server_id,
+            t.server_name,
+            t.priority,
+            t.cpu_core_need,
+            t.memory_need,
+            t.progress,
+            t.start_time,
+            t.end_time,
+            t.error_msg,
+            u.username AS creator
+        FROM mod_tasks t
+        LEFT JOIN mod_users u ON t.creator = u.user_id
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    t.task_name LIKE CONCAT('%', #{keyword}, '%')
+                    OR t.server_name LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+            <if test="status != null and status != ''">
+                AND t.status = #{status}
+            </if>
+            <if test="serverId != null">
+                AND t.server_id = #{serverId}
+            </if>
+        </where>
+        ORDER BY t.creation_time DESC
+    </select>
+
+    <update id="updateTaskPriorityWhenPending">
+        UPDATE mod_tasks
+        SET priority = #{priority}
+        WHERE task_id = #{taskId}
+          AND status IN ('pending', '未启动')
+    </update>
+
+    <update id="updateTaskStatusConditionally">
+        UPDATE mod_tasks
+        SET status = #{toStatus}
+        WHERE task_id = #{taskId}
+          AND status = #{fromStatus}
+    </update>
+
+    <select id="countRunningByType" resultType="java.lang.Integer">
+        SELECT COUNT(1)
+        FROM mod_tasks t
+        WHERE t.`type` = #{type}
+          AND t.status IN ('running', '仿真中')
+    </select>
+
+    <select id="selectPendingTasksForSchedule" resultType="com.scut.industrial_software.model.entity.ModTasks">
+        SELECT
+            t.task_id,
+            t.task_name,
+            t.creator AS creatorId,
+            t.creation_time,
+            t.project_id,
+            t.simulation_stage,
+            t.type,
+            t.status,
+            t.compute_resource,
+            t.server_id,
+            t.server_name,
+            t.priority,
+            t.cpu_core_need,
+            t.memory_need,
+            t.progress,
+            t.start_time,
+            t.end_time,
+            t.error_msg,
+            u.username AS creator
+        FROM mod_tasks t
+        LEFT JOIN mod_users u ON t.creator = u.user_id
+        <where>
+            t.status IN ('pending', '未启动')
+            <if test="type != null and type != ''">
+                AND t.`type` = #{type}
+            </if>
+        </where>
+        ORDER BY IFNULL(t.priority, 2) ASC, t.creation_time ASC
     </select>
 
 </mapper>

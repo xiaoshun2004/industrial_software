@@ -1,9 +1,10 @@
 package com.scut.industrial_software.service;
 
 import com.scut.industrial_software.common.api.ApiResult;
+import com.scut.industrial_software.model.dto.TaskRuntimeSnapshotDTO;
 import com.scut.industrial_software.model.vo.MonitorVO;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.Map;
 
 /**
  * <p>
@@ -17,11 +18,19 @@ public interface IMonitorService {
 
     ApiResult<MonitorVO> startProgram(String taskId);
 
-     void monitorProgram(Long pid);
-
     void scheduledMonitor();
 
     ApiResult<MonitorVO> stopProgram(String taskId);
 
     ApiResult<MonitorVO> getProgramStatus(String taskId);
+
+    /**
+     * 获取全部运行态快照，key 为 task_xxx。
+     */
+    Map<String, TaskRuntimeSnapshotDTO> getRuntimeSnapshots();
+
+    /**
+     * 获取单个任务运行态快照。
+     */
+    TaskRuntimeSnapshotDTO getRuntimeSnapshot(String taskId);
 }

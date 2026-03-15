@@ -20,6 +20,12 @@ public class RedisConstants {
     // 证书申请状态异步刷新的分布式锁
     public static final String LICENSE_STATUS_REFRESH_LOCK = "license:status:refresh:lock";
 
+    // 任务调度资源锁前缀（按求解器类型限流）
+    public static final String TASK_SCHEDULE_LOCK_PREFIX = "task:schedule:solver:";
+
+    // 任务运行实例锁前缀（防止重复启动）
+    public static final String TASK_RUN_LOCK_PREFIX = "task:run:";
+
     // token 的过期时间（30分钟）
     public static final long TOKEN_TTL = 30L;
 

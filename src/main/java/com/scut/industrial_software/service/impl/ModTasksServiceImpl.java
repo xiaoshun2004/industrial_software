@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -51,8 +50,11 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
 
     private static final List<String> STAGE_TYPES = Arrays.asList("前处理", "后处理", "求解器");
     private static final List<String> PREPROCESSING_SOLVER_TYPES = Arrays.asList("多体", "结构", "冲击");
-    private static final List<String> POSTPROCESSING_TYPES = Arrays.asList("通用后处理");
-    private static final List<String> STATUS_TYPES = Arrays.asList("未启动", "仿真中", "已结束");
+    private static final List<String> POSTPROCESSING_TYPES = List.of("通用后处理");
+    private static final String STATUS_PENDING = "pending";
+    private static final int DEFAULT_PRIORITY = 2;
+    private static final int DEFAULT_CPU_CORE_NEED = 1;
+    private static final int DEFAULT_MEMORY_NEED = 4;
 
     @Override
     public ApiResult<?> getSharedTasksPage(Integer projectId, PageRequestDTO requestDTO) {
@@ -135,7 +137,11 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         task.setProjectId(projectId);
         task.setSimulationStage(createDTO.getSimulationStage());
         task.setType(createDTO.getType());
-        task.setStatus("未启动"); // 默认状态为未启动
+        task.setStatus(STATUS_PENDING);
+        task.setPriority(DEFAULT_PRIORITY);
+        task.setCpuCoreNeed(DEFAULT_CPU_CORE_NEED);
+        task.setMemoryNeed(DEFAULT_MEMORY_NEED);
+        task.setProgress(0);
         task.setComputeResource(createDTO.getComputeResource());
 
         boolean IsSave = this.save(task);
@@ -178,7 +184,11 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         task.setProjectId(projectId);
         task.setSimulationStage(createDTO.getSimulationStage());
         task.setType(createDTO.getType());
-        task.setStatus("未启动"); // 默认状态为未启动
+        task.setStatus(STATUS_PENDING);
+        task.setPriority(DEFAULT_PRIORITY);
+        task.setCpuCoreNeed(DEFAULT_CPU_CORE_NEED);
+        task.setMemoryNeed(DEFAULT_MEMORY_NEED);
+        task.setProgress(0);
         task.setComputeResource(createDTO.getComputeResource());
 
         boolean IsSave = this.save(task);
@@ -195,14 +205,10 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
 
     @Override
     public ApiResult<?> deleteTask(String taskId) {
-        // 将task_%3d格式的taskId转换为整数ID
-        Integer taskIdInt = null;
-
-        if (taskId.startsWith("task_")) {
-            taskIdInt = Integer.parseInt(taskId.substring(5));
-        }
-
-        if (taskIdInt == null){
+        Integer taskIdInt;
+        try {
+            taskIdInt = taskId != null && taskId.startsWith("task_") ? Integer.parseInt(taskId.substring(5)) : Integer.parseInt(taskId);
+        } catch (Exception ex) {
             return ApiResult.failed("任务ID格式不正确");
         }
 

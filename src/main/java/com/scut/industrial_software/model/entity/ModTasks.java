@@ -1,17 +1,16 @@
 package com.scut.industrial_software.model.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.io.Serializable;
-import java.time.LocalDateTime;
-
-import jakarta.persistence.Column;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.io.Serializable;
+import java.time.LocalDateTime;
 
 /**
  * <p>
@@ -40,7 +39,7 @@ public class ModTasks implements Serializable {
     @JsonIgnore
     @TableField("creator")
     private Integer creatorId;
-    
+
     /**
      * 创建者用户名（不存储到数据库，用于返回给前端）
      */
@@ -51,21 +50,66 @@ public class ModTasks implements Serializable {
     private LocalDateTime creationTime;
 
     private Integer projectId;
-    
+
     /**
      * 仿真阶段（前处理、后处理、求解器）
      */
     private String simulationStage;
-    
+
     /**
      * 任务类型（多体、结构、冲击、通用后处理）
      */
     private String type;
-    
+
     /**
      * 任务状态（pending、running、paused、waiting、completed）
      */
     private String status;
+
+    /**
+     * 所属服务器ID
+     */
+    private Integer serverId;
+
+    /**
+     * 所属服务器名称
+     */
+    private String serverName;
+
+    /**
+     * 优先级：1=高，2=中，3=低
+     */
+    private Integer priority;
+
+    /**
+     * CPU 核心需求
+     */
+    private Integer cpuCoreNeed;
+
+    /**
+     * 内存需求(GB)
+     */
+    private Integer memoryNeed;
+
+    /**
+     * 执行进度(0-100)
+     */
+    private Integer progress;
+
+    /**
+     * 启动时间
+     */
+    private LocalDateTime startTime;
+
+    /**
+     * 结束时间
+     */
+    private LocalDateTime endTime;
+
+    /**
+     * 失败原因
+     */
+    private String errorMsg;
 
     /**
      * 计算类型（GPU等）（可选）
