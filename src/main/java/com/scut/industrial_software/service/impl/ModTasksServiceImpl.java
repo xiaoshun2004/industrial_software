@@ -71,7 +71,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         Page<ModTasks> page = new Page<>(requestDTO.getPageNum(), requestDTO.getPageSize());
         IPage<ModTasks> pageResult = baseMapper.selectSharedTasksByPage(page, projectId, requestDTO.getKeyword());
 
-        List<ModTasksVO> modTasksVO = pageResult.getRecords().stream().map(ModTasksVO::new).toList();
+        List<ModTasksVO> modTasksVO = pageResult.getRecords().stream().map(this::toTaskVOWithDisplayStatus).toList();
         
         Map<String, Object> result = new HashMap<>();
         result.put("records", modTasksVO);
@@ -97,7 +97,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         Page<ModTasks> page = new Page<>(requestDTO.getPageNum(), requestDTO.getPageSize());
         IPage<ModTasks> pageResult = baseMapper.selectPrivateTasksByPage(page, projectId, requestDTO.getKeyword());
 
-        List<ModTasksVO> modTasksVO = pageResult.getRecords().stream().map(ModTasksVO::new).toList();
+        List<ModTasksVO> modTasksVO = pageResult.getRecords().stream().map(this::toTaskVOWithDisplayStatus).toList();
         
         Map<String, Object> result = new HashMap<>();
         result.put("records", modTasksVO);
@@ -150,7 +150,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
             throw new ApiException(ApiErrorCode.TASK_CREATION_FAILED);
         }
 
-        ModTasksVO modTasksVO = new ModTasksVO(task);
+        ModTasksVO modTasksVO = toTaskVOWithDisplayStatus(task);
 
         return ApiResult.success(modTasksVO, "任务创建成功");
     }
@@ -197,7 +197,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
             throw new ApiException(ApiErrorCode.TASK_CREATION_FAILED);
         }
 
-        ModTasksVO modTasksVO = new ModTasksVO(task);
+        ModTasksVO modTasksVO = toTaskVOWithDisplayStatus(task);
 
         return ApiResult.success(modTasksVO, "任务创建成功");
 
@@ -246,6 +246,30 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
     @Override
     public ApiResult<?> stopTask(String taskId) {
         return monitorService.stopProgram(taskId);
+    }
+
+    /**
+     * 构建任务返回对象并统一转换状态展示文案
+     */
+    private ModTasksVO toTaskVOWithDisplayStatus(ModTasks task) {
+        ModTasksVO taskVO = new ModTasksVO(task);
+        taskVO.setStatus(convertTaskStatus(taskVO.getStatus()));
+        return taskVO;
+    }
+
+    /**
+     * 任务状态转换：pending->未启动，running->仿真中，completed/failed->已结束
+     */
+    private String convertTaskStatus(String status) {
+        if (!StringUtils.hasText(status)) {
+            return status;
+        }
+        return switch (status.toLowerCase()) {
+            case "pending" -> "未启动";
+            case "running" -> "仿真中";
+            case "completed", "failed" -> "已结束";
+            default -> status;
+        };
     }
 
     /**

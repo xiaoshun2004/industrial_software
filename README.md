@@ -35,6 +35,7 @@ Spring Boot 3.x 的工业软件管理平台，提供用户/角色与权限管理
    - `component.store.*`: 组件安装包、解压目录路径。
    - `ptc.license.*`、`license.store.*`: 许可证密钥/证书存储及口令。
 3. 运行时可用 `--server.port=XXXX` 或环境变量覆盖对应配置。
+4. 打包后的运行推荐使用外置配置：将 `target/config/application.yaml.template` 复制为 `config/application.yaml`，填写后与 jar 同级部署。
 
 ## 构建与运行
 ```bash
@@ -42,6 +43,23 @@ mvn clean package -DskipTests
 java -jar target/industrial_software-0.0.1-SNAPSHOT.jar
 # 开发模式
 mvn spring-boot:run
+```
+
+### 外置配置打包与部署（推荐）
+- 打包时不会将 `src/main/resources/application.yaml` 打进 jar，避免把本地环境配置带给他人。
+- 打包后会自动生成 `target/config/application.yaml.template`，供部署环境填写。
+
+```bash
+# 1) 打包
+mvn clean package -DskipTests
+
+# 2) 准备外置配置（Windows PowerShell）
+New-Item -ItemType Directory -Force .\target\deploy\config
+Copy-Item .\target\industrial_software-0.0.1-SNAPSHOT.jar .\target\deploy\
+Copy-Item .\target\config\application.yaml.template .\target\deploy\config\application.yaml
+
+# 3) 编辑 .\target\deploy\config\application.yaml 后运行
+java -jar .\target\deploy\industrial_software-0.0.1-SNAPSHOT.jar
 ```
 
 ## 测试
