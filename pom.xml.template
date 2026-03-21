@@ -269,6 +269,10 @@
                 <includes>
                     <include>**/*</include>
                 </includes>
+                <excludes>
+                    <!-- Do not package developer-local runtime config into the distributable jar -->
+                    <exclude>application.yaml</exclude>
+                </excludes>
             </resource>
             <resource>
                 <directory>src/main/java</directory>
