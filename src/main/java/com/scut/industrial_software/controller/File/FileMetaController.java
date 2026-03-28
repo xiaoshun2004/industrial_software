@@ -1,6 +1,5 @@
 package com.scut.industrial_software.controller.File;
 
-import com.baomidou.mybatisplus.annotation.DbType;
 import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.model.dto.FileQueryDTO;
 import com.scut.industrial_software.model.vo.FileMetaVO;
@@ -11,12 +10,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.web.multipart.support.StandardMultipartHttpServletRequest;
 
-import java.io.InputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
@@ -135,22 +134,13 @@ public class FileMetaController {
     /**
      * 获取当前用户的文件列表√
      *
-     * @param dbType 文件隶属的数据库类型
-     * @param pageNum 页码
-     * @param pageSize 每页大小
+     * @param queryDTO 文件隶属的数据库类型
      * @return 文件列表
      */
     @GetMapping("/files")
-    public ApiResult<PageVO<FileMetaVO>> getMyFiles(
-            @RequestParam(value = "dbType") String dbType,
-            @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
-            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
-        log.info("获取我的文件列表: dbType={}, pageNum={}, pageSize={}", dbType,pageNum, pageSize);
-        
-        FileQueryDTO queryDTO = new FileQueryDTO();
-        queryDTO.setDbType(dbType);
-        queryDTO.setPageNum(pageNum);
-        queryDTO.setPageSize(pageSize);
+    public ApiResult<PageVO<FileMetaVO>> getMyFiles(@ModelAttribute @Validated FileQueryDTO queryDTO) {
+
+        log.info("获取文件列表: dbType={}, pageNum={}, pageSize={}, keyword={}", queryDTO.getDbType(), queryDTO.getPageNum(), queryDTO.getPageSize(), queryDTO.getKeyword());
         
         PageVO<FileMetaVO> pageResult = fileMetaService.getMyFiles(queryDTO);
         return ApiResult.success(pageResult);

@@ -249,7 +249,7 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
         Page<FileMeta> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
         
         // 查询当前用户的文件
-        IPage<FileMeta> filePage = baseMapper.selectPageByCreatorIdAndDbType(page, currentUser.getId(), queryDTO.getDbType());
+        IPage<FileMeta> filePage = baseMapper.selectPageByCreatorIdAndDbType(page, currentUser.getId(), queryDTO.getDbType(), queryDTO.getKeyword());
 
         // 转换为VO
         List<FileMetaVO> records = filePage.getRecords().stream()

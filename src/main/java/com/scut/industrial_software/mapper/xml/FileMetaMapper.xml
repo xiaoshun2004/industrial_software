@@ -31,6 +31,9 @@
         SELECT * FROM file_meta
         WHERE creator_id = #{creatorId}
         AND db_type = #{dbType}
+        <if test="keyword != null and keyword != ''">
+            AND file_name LIKE CONCAT('%',#{keyword},'%')
+        </if>
         ORDER BY create_time DESC
     </select>
     
