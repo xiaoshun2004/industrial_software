@@ -30,9 +30,13 @@ public interface FileMetaMapper extends BaseMapper<FileMeta> {
      * @param page 分页参数
      * @param creatorId 创建者ID
      * @param dbType 数据库类型
+     * @param keyword 文件名关键字（可选）
      * @return 分页结果
      */
-    IPage<FileMeta> selectPageByCreatorIdAndDbType(Page<FileMeta> page, @Param("creatorId") Integer creatorId, @Param("dbType") String dbType);
+    IPage<FileMeta> selectPageByCreatorIdAndDbType(Page<FileMeta> page,
+                                                   @Param("creatorId") Integer creatorId,
+                                                   @Param("dbType") String dbType,
+                                                   @Param("keyword") String keyword);
 
     /**
      * 根据关键字分页模糊查询文件列表

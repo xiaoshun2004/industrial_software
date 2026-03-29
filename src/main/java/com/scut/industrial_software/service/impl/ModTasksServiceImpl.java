@@ -41,7 +41,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
 
     @Autowired
     private IModProjectsService modProjectsService;
-    
+
     @Autowired
     private IModUsersService modUsersService;
 
@@ -50,7 +50,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
 
     private static final List<String> STAGE_TYPES = Arrays.asList("前处理", "后处理", "求解器");
     private static final List<String> PREPROCESSING_SOLVER_TYPES = Arrays.asList("多体", "结构", "冲击");
-    private static final List<String> POSTPROCESSING_TYPES = List.of("通用后处理");
+    private static final List<String> POSTPROCESSING_TYPES = List.of("通用后处理", "多体");
     private static final String STATUS_PENDING = "pending";
     private static final int DEFAULT_PRIORITY = 2;
     private static final int DEFAULT_CPU_CORE_NEED = 1;
@@ -63,22 +63,22 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         if (project == null) {
             throw new ApiException(ApiErrorCode.PROJECT_NOT_FOUND);
         }
-        
+
         if (project.getProjectStatus() != 0) {
             return ApiResult.failed("不是共享项目");
         }
-        
+
         Page<ModTasks> page = new Page<>(requestDTO.getPageNum(), requestDTO.getPageSize());
         IPage<ModTasks> pageResult = baseMapper.selectSharedTasksByPage(page, projectId, requestDTO.getKeyword());
 
         List<ModTasksVO> modTasksVO = pageResult.getRecords().stream().map(this::toTaskVOWithDisplayStatus).toList();
-        
+
         Map<String, Object> result = new HashMap<>();
         result.put("records", modTasksVO);
         result.put("total", pageResult.getTotal());
         result.put("size", pageResult.getSize());
         result.put("current", pageResult.getCurrent());
-        
+
         return ApiResult.success(result);
     }
 
@@ -89,22 +89,22 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         if (project == null) {
             throw new ApiException(ApiErrorCode.PROJECT_NOT_FOUND);
         }
-        
+
         if (project.getProjectStatus() != 1) {
             return ApiResult.failed("不是私人项目");
         }
-        
+
         Page<ModTasks> page = new Page<>(requestDTO.getPageNum(), requestDTO.getPageSize());
         IPage<ModTasks> pageResult = baseMapper.selectPrivateTasksByPage(page, projectId, requestDTO.getKeyword());
 
         List<ModTasksVO> modTasksVO = pageResult.getRecords().stream().map(this::toTaskVOWithDisplayStatus).toList();
-        
+
         Map<String, Object> result = new HashMap<>();
         result.put("records", modTasksVO);
         result.put("total", pageResult.getTotal());
         result.put("size", pageResult.getSize());
         result.put("current", pageResult.getCurrent());
-        
+
         return ApiResult.success(result);
     }
 
@@ -115,20 +115,20 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         if (project == null) {
             throw new ApiException(ApiErrorCode.PROJECT_NOT_FOUND);
         }
-        
+
         if (project.getProjectStatus() != 0) {
             return ApiResult.failed("不是共享项目");
         }
-        
+
         // 校验输入参数（包括用户是否存在）
         ApiResult<?> validateResult = validateTaskParams(createDTO);
         if (validateResult != null) {
             return validateResult;
         }
-        
+
         // 通过用户名查询用户ID
         Integer creatorId = getUserIdByUsername(createDTO.getCreator());
-        
+
         ModTasks task = new ModTasks();
         task.setTaskName(createDTO.getTaskName());
         task.setCreatorId(creatorId);
@@ -162,20 +162,20 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         if (project == null) {
             throw new ApiException(ApiErrorCode.PROJECT_NOT_FOUND);
         }
-        
+
         if (project.getProjectStatus() != 1) {
             return ApiResult.failed("不是私人项目");
         }
-        
+
         // 校验输入参数（包括用户是否存在）
         ApiResult<?> validateResult = validateTaskParams(createDTO);
         if (validateResult != null) {
             return validateResult;
         }
-        
+
         // 通过用户名查询用户ID
         Integer creatorId = getUserIdByUsername(createDTO.getCreator());
-        
+
         ModTasks task = new ModTasks();
         task.setTaskName(createDTO.getTaskName());
         task.setCreatorId(creatorId);
@@ -216,7 +216,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         if (task == null) {
             throw new ApiException(ApiErrorCode.RESOURCE_NOT_FOUND);
         }
-        
+
         // 填充创建者用户名信息
         if (task.getCreatorId() != null) {
             ModUsers creator = modUsersService.getById(task.getCreatorId());
@@ -224,7 +224,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
                 task.setCreator(creator.getUsername());
             }
         }
-        
+
         boolean result = this.removeById(taskIdInt);
         if (result) {
             return ApiResult.success(null, "删除成功");
@@ -274,7 +274,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
 
     /**
      * 通过用户名查询用户ID
-     * 
+     *
      * @param username 用户名
      * @return 用户ID
      */
@@ -284,10 +284,10 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         ModUsers user = modUsersService.getOne(wrapper);
         return user != null ? user.getUserId() : null;
     }
-    
+
     /**
      * 校验任务参数
-     * 
+     *
      * @param createDTO 任务创建参数
      * @return 校验结果，null表示校验通过
      */
@@ -295,39 +295,39 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         if (!StringUtils.hasText(createDTO.getTaskName())) {
             return ApiResult.failed("任务名称不能为空");
         }
-        
+
         // 校验创建者用户名
         if (!StringUtils.hasText(createDTO.getCreator())) {
             return ApiResult.failed("创建者不能为空");
         }
-        
+
         // 校验用户是否存在
         Integer creatorId = getUserIdByUsername(createDTO.getCreator());
         if (creatorId == null) {
             return ApiResult.failed("创建者用户不存在");
         }
-        
+
         // 校验仿真阶段
-        if (!StringUtils.hasText(createDTO.getSimulationStage()) || 
+        if (!StringUtils.hasText(createDTO.getSimulationStage()) ||
                 !STAGE_TYPES.contains(createDTO.getSimulationStage())) {
             return ApiResult.failed("仿真阶段不正确，应为：前处理、后处理、求解器");
         }
-        
+
         // 校验任务类型与仿真阶段匹配
         if (!StringUtils.hasText(createDTO.getType())) {
             return ApiResult.failed("任务类型不能为空");
         }
-        
+
         if ("后处理".equals(createDTO.getSimulationStage())) {
             if (!POSTPROCESSING_TYPES.contains(createDTO.getType())) {
-                return ApiResult.failed("后处理阶段任务类型只能为：通用后处理");
+                return ApiResult.failed("后处理阶段任务类型只能为：通用后处理/多体");
             }
         } else if ("前处理".equals(createDTO.getSimulationStage()) || "求解器".equals(createDTO.getSimulationStage())) {
             if (!PREPROCESSING_SOLVER_TYPES.contains(createDTO.getType())) {
                 return ApiResult.failed("前处理/求解器阶段任务类型只能为：多体、结构、冲击");
             }
         }
-        
+
         return null;
     }
 }

@@ -8,11 +8,6 @@ import com.scut.industrial_software.model.vo.FileMetaVO;
 import com.scut.industrial_software.model.vo.PageVO;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.http.Part;
-import java.io.InputStream;
-
-import java.io.InputStream;
-
 /**
  * <p>
  * 文件元数据表 服务类
@@ -79,4 +74,10 @@ public interface IFileMetaService extends IService<FileMeta> {
      * @return 是否成功
      */
     boolean deleteFile(String id);
-} 
+
+    ApiResult<Object> checkFiles(String md5, Long totalChunks);
+
+    ApiResult<Object> uploadChunk(String md5, Integer chunkIndex, MultipartFile file);
+
+    ApiResult<Object> mergeChunk(String md5, String fileName, Long totalChunks);
+}

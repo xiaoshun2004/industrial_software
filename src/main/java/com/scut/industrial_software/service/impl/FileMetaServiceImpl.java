@@ -9,6 +9,7 @@ import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.common.constant.Constant;
 import com.scut.industrial_software.common.exception.ApiException;
 import com.scut.industrial_software.mapper.FileMetaMapper;
+import com.scut.industrial_software.model.constant.RedisConstants;
 import com.scut.industrial_software.model.dto.FileQueryDTO;
 import com.scut.industrial_software.model.dto.UserDTO;
 import com.scut.industrial_software.model.entity.FileMeta;
@@ -17,21 +18,23 @@ import com.scut.industrial_software.model.vo.PageVO;
 import com.scut.industrial_software.service.IFileMetaService;
 import com.scut.industrial_software.utils.TransFileSizeUtil;
 import com.scut.industrial_software.utils.UserHolder;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.http.Part;
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -47,6 +50,9 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
 
     @Value("${files.upload.path}")
     private String uploadPath;
+
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -247,9 +253,10 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
 
         // 构建分页参数
         Page<FileMeta> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
-        
+        String keyword = StringUtils.hasText(queryDTO.getKeyword()) ? queryDTO.getKeyword().trim() : null;
+
         // 查询当前用户的文件
-        IPage<FileMeta> filePage = baseMapper.selectPageByCreatorIdAndDbType(page, currentUser.getId(), queryDTO.getDbType());
+        IPage<FileMeta> filePage = baseMapper.selectPageByCreatorIdAndDbType(page, currentUser.getId(), queryDTO.getDbType(), keyword);
 
         // 转换为VO
         List<FileMetaVO> records = filePage.getRecords().stream()
@@ -262,7 +269,7 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
                     return vo;
                 })
                 .collect(Collectors.toList());
-        
+
         // 构建分页结果
         return PageVO.build(records, filePage.getTotal(), queryDTO.getPageNum(), queryDTO.getPageSize());
     }
@@ -272,10 +279,10 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
     public PageVO<FileMetaVO> searchFiles(FileQueryDTO queryDTO) {
         // 构建分页参数
         Page<FileMeta> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
-        
+
         // 根据关键字查询文件
         IPage<FileMeta> filePage = baseMapper.selectPageByKeyword(page, queryDTO.getKeyword());
-        
+
         // 转换为VO
         List<FileMetaVO> records = filePage.getRecords().stream()
                 .map(fileMeta -> {
@@ -284,7 +291,7 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
                     return vo;
                 })
                 .collect(Collectors.toList());
-        
+
         // 构建分页结果
         return PageVO.build(records, filePage.getTotal(), queryDTO.getPageNum(), queryDTO.getPageSize());
     }
@@ -320,7 +327,58 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
         }
 
         // 删除数据库记录
-        return IsRemove;
+        return true;
     }
 
-} 
+    @Override
+    public ApiResult<Object> checkFiles(String md5, Long totalChunks) {
+        // 需要实现将最近一个未收到的文件分片索引号返回
+        // 0. 字段异常判空
+        if(!StringUtils.hasText(md5)){
+            throw new ApiException("文件标识符不能为空");
+        }
+        if(totalChunks == null || totalChunks <= 0){
+            throw new ApiException("文件分片总数必须为正整数");
+        }
+        // 1. 缓存的key值
+        String key = RedisConstants.FILE_UPLOAD_CHUNK_PREFIX + md5;
+        // 2. 获取顺序排列下来第一个缺失的索引号
+        long firstMissing = findFirstMissingChunkKey(key, totalChunks);
+        // 3. 统计后端已上传数量
+
+        // 4. 返回{md5,firstMissing,count}信息给前端网页
+
+        return null;
+    }
+
+    private long findFirstMissingChunkKey(String key, long totalChunks) {
+        // 1. 每次扫描1024位
+        final long batchSize = 1024;
+        long start = 0;
+        while(start < totalChunks){
+            long end =  Math.min(start + batchSize, totalChunks);
+
+            for(long i = start; i < end; i++){
+                Boolean bit = stringRedisTemplate.opsForValue().getBit(key, i);
+                if(Boolean.FALSE.equals(bit)){
+                    return i;
+                }
+            }
+
+            start = end;
+        }
+        // 如果所有分片都上传完
+        return -1L;
+    }
+
+    @Override
+    public ApiResult<Object> uploadChunk(String md5, Integer chunkIndex, MultipartFile file) {
+        return null;
+    }
+
+    @Override
+    public ApiResult<Object> mergeChunk(String md5, String fileName, Long totalChunks) {
+        return null;
+    }
+
+}

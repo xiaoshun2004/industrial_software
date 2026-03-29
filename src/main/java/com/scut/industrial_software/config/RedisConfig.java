@@ -3,8 +3,11 @@ package com.scut.industrial_software.config;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
+import org.redisson.config.SingleServerConfig;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.StringUtils;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -13,6 +16,15 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
 public class RedisConfig {
+
+    @Value("${redisson.single-server.address:redis://127.0.0.1:6379}")
+    private String redissonAddress;
+
+    @Value("${redisson.single-server.database:1}")
+    private int redissonDatabase;
+
+    @Value("${redisson.single-server.password:}")
+    private String redissonPassword;
 
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
@@ -47,10 +59,13 @@ public class RedisConfig {
 
     @Bean
     public RedissonClient redissonClient() {
-        // 配置
         Config config = new Config();
-        config.useSingleServer().setAddress("redis://127.0.0.1:6379");
-        // 创建 RedissonClient 对象
+        SingleServerConfig singleServerConfig = config.useSingleServer()
+                .setAddress(redissonAddress)
+                .setDatabase(redissonDatabase);
+        if (StringUtils.hasText(redissonPassword)) {
+            singleServerConfig.setPassword(redissonPassword);
+        }
         return Redisson.create(config);
     }
 

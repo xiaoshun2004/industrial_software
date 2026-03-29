@@ -1,6 +1,5 @@
 package com.scut.industrial_software.controller.File;
 
-import com.baomidou.mybatisplus.annotation.DbType;
 import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.model.dto.FileQueryDTO;
 import com.scut.industrial_software.model.vo.FileMetaVO;
@@ -11,12 +10,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 import org.springframework.web.multipart.support.StandardMultipartHttpServletRequest;
 
-import java.io.InputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
@@ -98,17 +101,17 @@ public class FileMetaController {
             @RequestParam("dbType") String dbType,
             @RequestParam("field") String field) {
         log.info("下载文件: {}", field);
-        
+
         // 获取文件信息
         FileMetaVO fileInfo = fileMetaService.getFileInfo(field);
-        
+
         // 获取文件内容
         byte[] fileContent = fileMetaService.downloadFile(field);
-        
+
         // 设置响应头
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        
+
         // 对文件名进行URL编码，解决中文文件名问题
         String fileName = fileInfo.getFileName();
 
@@ -144,14 +147,16 @@ public class FileMetaController {
     public ApiResult<PageVO<FileMetaVO>> getMyFiles(
             @RequestParam(value = "dbType") String dbType,
             @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
-            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
-        log.info("获取我的文件列表: dbType={}, pageNum={}, pageSize={}", dbType,pageNum, pageSize);
-        
+            @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize,
+            @RequestParam(value = "keyword", required = false) String keyword) {
+        log.info("获取我的文件列表: dbType={}, pageNum={}, pageSize={}, keyword={}", dbType, pageNum, pageSize, keyword);
+
         FileQueryDTO queryDTO = new FileQueryDTO();
         queryDTO.setDbType(dbType);
         queryDTO.setPageNum(pageNum);
         queryDTO.setPageSize(pageSize);
-        
+        queryDTO.setKeyword(keyword);
+
         PageVO<FileMetaVO> pageResult = fileMetaService.getMyFiles(queryDTO);
         return ApiResult.success(pageResult);
     }
@@ -197,5 +202,46 @@ public class FileMetaController {
         return ApiResult.success();
     }
 
+    /**
+     * 大文件上传检查分片（秒传）
+     * @param md5 文件标识符
+     * @param totalChunks 文件分片总数
+     * @return 返回结果
+     */
+    @GetMapping("/check")
+    public ApiResult<Object> checkFile(@RequestParam String md5,
+                                       @RequestParam Long totalChunks){
+        log.info("检查文件: md5={}, totalChunks={}", md5, totalChunks);
+        return fileMetaService.checkFiles(md5, totalChunks);
+    }
 
+    /**
+     * 大文件分片上传
+     * @param md5 文件标识符
+     * @param chunkIndex 文件分片索引
+     * @param file 文件分片流式内容
+     * @return 返回结果
+     */
+    @PostMapping("/chunk")
+    public ApiResult<Object> uploadChunk(@RequestParam String md5,
+                                         @RequestParam Integer chunkIndex,
+                                         @RequestParam MultipartFile file){
+        log.info("上传文件分片: md5={}, chunkIndex={}", md5, chunkIndex);
+        return fileMetaService.uploadChunk(md5, chunkIndex, file);
+    }
+
+    /**
+     * 大文件分片合并
+     * @param md5 文件标识符
+     * @param fileName 文件名
+     * @param totalChunks 文件分片总数
+     * @return 返回结果（合并成功、失败）
+     */
+    @PostMapping("merge")
+    public ApiResult<Object> mergeChunk(@RequestParam String md5,
+                                        @RequestParam String fileName,
+                                        @RequestParam Long totalChunks){
+        log.info("合并文件分片: md5={}, fileName={}, totalChunks={}", md5, fileName, totalChunks);
+        return fileMetaService.mergeChunk(md5, fileName, totalChunks);
+    }
 }

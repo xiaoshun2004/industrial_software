@@ -13,7 +13,7 @@ public class MonitorTaskItemVO {
 
     private String taskId;
 
-    private String name;
+    private String taskName;
 
     private Integer serverId;
 
@@ -38,7 +38,7 @@ public class MonitorTaskItemVO {
     public static MonitorTaskItemVO from(ModTasks task) {
         MonitorTaskItemVO vo = new MonitorTaskItemVO();
         vo.setTaskId("task_" + task.getTaskId());
-        vo.setName(task.getTaskName());
+        vo.setTaskName(task.getTaskName());
         vo.setServerId(task.getServerId());
         vo.setServerName(task.getServerName());
         vo.setType(task.getType());

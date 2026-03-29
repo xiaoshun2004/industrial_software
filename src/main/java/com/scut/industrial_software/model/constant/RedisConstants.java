@@ -26,6 +26,9 @@ public class RedisConstants {
     // 任务运行实例锁前缀（防止重复启动）
     public static final String TASK_RUN_LOCK_PREFIX = "task:run:";
 
+    // 文件分片上传的索引总数
+    public static final String FILE_UPLOAD_CHUNK_PREFIX = "file:upload:chunk:";
+
     // token 的过期时间（30分钟）
     public static final long TOKEN_TTL = 30L;
 

@@ -38,6 +38,13 @@ spring:
           min-idle: 1
           time-between-eviction-runs: 10s
 
+# Redisson 配置（建议与 spring.data.redis 保持一致）
+redisson:
+  single-server:
+    address: redis://localhost:6379
+    database: 1
+    # password: YOUR_PASSWORD
+
 # MyBatis-Plus 配置
 mybatis-plus:
   # 配置 mapper xml 文件路径

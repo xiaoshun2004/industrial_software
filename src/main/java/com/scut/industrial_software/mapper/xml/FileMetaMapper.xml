@@ -31,18 +31,21 @@
         SELECT * FROM file_meta
         WHERE creator_id = #{creatorId}
         AND db_type = #{dbType}
+        <if test="keyword != null and keyword != ''">
+            AND file_name LIKE CONCAT('%', #{keyword}, '%')
+        </if>
         ORDER BY create_time DESC
     </select>
-    
+
     <!-- 根据关键字分页模糊查询文件列表 -->
     <select id="selectPageByKeyword" resultMap="BaseResultMap">
         SELECT * FROM file_meta
         <where>
             <if test="keyword != null and keyword != ''">
-                AND (file_name LIKE CONCAT('%', #{keyword}, '%') 
+                AND (file_name LIKE CONCAT('%', #{keyword}, '%')
                 OR description LIKE CONCAT('%', #{keyword}, '%'))
             </if>
         </where>
         ORDER BY create_time DESC
     </select>
-</mapper> 
+</mapper>
