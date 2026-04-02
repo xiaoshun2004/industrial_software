@@ -1,5 +1,6 @@
 package com.scut.industrial_software.model.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -36,4 +37,10 @@ public class UserOrganization implements Serializable {
      * 组织ID
      */
     private Integer orgId;
-} 
+
+    /**
+     * 是否为组管理员：0-否，1-是
+     */
+    @TableField("is_group_admin")
+    private Integer isGroupAdmin;
+}

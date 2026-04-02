@@ -27,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 import java.util.ArrayList;
@@ -152,7 +153,7 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
             vo.setTaskPermission(user.getTaskPermission());
             
             // 查询并设置用户组织信息
-            UserOrganization userOrg = getUserOrganization(user.getUserId());
+            UserOrganization userOrg = getUserOrganizationRelation(user.getUserId());
             if (userOrg != null) {
                 Organization organization = organizationMapper.selectById(userOrg.getOrgId());
                 if (organization != null) {
@@ -351,7 +352,7 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
         userInfoVO.setTaskPermission(user.getTaskPermission());
         
         // 查询并设置用户组织信息
-        UserOrganization userOrg = getUserOrganization(user.getUserId());
+        UserOrganization userOrg = getUserOrganizationRelation(user.getUserId());
         if (userOrg != null) {
             Organization organization = organizationMapper.selectById(userOrg.getOrgId());
             if (organization != null) {
@@ -374,7 +375,8 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
      * @param userId 用户ID
      * @return 用户组织关联对象，如果用户未分配组织则返回null
      */
-    private UserOrganization getUserOrganization(Integer userId) {
+    @Override
+    public UserOrganization getUserOrganizationRelation(Integer userId) {
         // 查询用户组织关联
         LambdaQueryWrapper<UserOrganization> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(UserOrganization::getUserId, userId);
@@ -387,7 +389,7 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
      * @return 组织名称，如果用户未分配组织则返回"无"
      */
     private String getUserOrganizationName(Integer userId) {
-        UserOrganization userOrg = getUserOrganization(userId);
+        UserOrganization userOrg = getUserOrganizationRelation(userId);
         
         if (userOrg == null) {
             return "无";
@@ -415,64 +417,74 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
     @Override
     @Transactional
     public ApiResult<Object> changeUserOrganization(UserOrganizationDTO userOrganizationDTO) {
-        // 1. 查询用户是否存在
         Integer userId = Integer.valueOf(userOrganizationDTO.getUserId());
+        Integer newOrgId = null;
+
+        if (userOrganizationDTO.getOrgId() != null && !userOrganizationDTO.getOrgId().trim().isEmpty()) {
+            newOrgId = Integer.valueOf(userOrganizationDTO.getOrgId());
+        }
+
+        return updateUserOrganizationRelation(userId, newOrgId, null);
+    }
+
+    @Override
+    @Transactional
+    public ApiResult<Object> updateUserOrganizationRelation(Integer userId, Integer orgId, Boolean isGroupAdmin) {
         ModUsers user = baseMapper.selectById(userId);
         if (user == null) {
             return ApiResult.failed("用户不存在");
         }
 
-        // 2. 删除用户原有的组织关联
+        UserOrganization existingRelation = getUserOrganizationRelation(userId);
+        Integer targetAdminFlag = isGroupAdmin == null ? null : (Boolean.TRUE.equals(isGroupAdmin) ? 1 : 0);
+
+        if (existingRelation != null && Integer.valueOf(1).equals(existingRelation.getIsGroupAdmin())) {
+            boolean leavingCurrentOrg = orgId == null || !existingRelation.getOrgId().equals(orgId);
+            boolean downgradingCurrentOrg = existingRelation.getOrgId().equals(orgId) && Integer.valueOf(0).equals(targetAdminFlag);
+            if ((leavingCurrentOrg || downgradingCurrentOrg) && countGroupAdmins(existingRelation.getOrgId()) <= 1) {
+                return ApiResult.failed("组织至少保留一名组管理员");
+            }
+        }
+
+        if (existingRelation != null && orgId != null && existingRelation.getOrgId().equals(orgId) && targetAdminFlag == null) {
+            int updatedProjectsCount = syncUserProjectsOrganization(userId, orgId);
+            return buildUserOrganizationChangeResult(getOrganizationName(orgId), updatedProjectsCount);
+        }
+
         LambdaQueryWrapper<UserOrganization> deleteWrapper = new LambdaQueryWrapper<>();
         deleteWrapper.eq(UserOrganization::getUserId, userId);
         userOrganizationMapper.delete(deleteWrapper);
 
         String newOrganizationName = "无";
         Integer newOrgId = null;
-        
-        // 3. 如果提供了新的组织ID且不为空字符串，则添加新的关联
-        if (userOrganizationDTO.getOrgId() != null && !userOrganizationDTO.getOrgId().trim().isEmpty()) {
-            newOrgId = Integer.valueOf(userOrganizationDTO.getOrgId());
-            
-            // 验证组织是否存在
-            Organization organization = organizationMapper.selectById(newOrgId);
+        Integer finalAdminFlag = 0;
+
+        if (orgId != null) {
+            Organization organization = organizationMapper.selectById(orgId);
             if (organization == null) {
+                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
                 return ApiResult.failed("目标组织不存在");
             }
-            
-            // 添加新的用户组织关联
+
+            newOrgId = orgId;
+            newOrganizationName = organization.getOrgName();
+            if (targetAdminFlag != null) {
+                finalAdminFlag = targetAdminFlag;
+            } else if (existingRelation != null && orgId.equals(existingRelation.getOrgId())) {
+                finalAdminFlag = existingRelation.getIsGroupAdmin();
+            }
+
             UserOrganization newUserOrg = UserOrganization.builder()
                     .userId(userId)
                     .orgId(newOrgId)
+                    .isGroupAdmin(finalAdminFlag)
                     .build();
             userOrganizationMapper.insert(newUserOrg);
-            
-            newOrganizationName = organization.getOrgName();
         }
 
-        // 4. 同步更新该用户创建的所有项目的所属组织
-        LambdaQueryWrapper<ModProjects> projectWrapper = new LambdaQueryWrapper<>();
-        projectWrapper.eq(ModProjects::getCreator, userId);
-        List<ModProjects> userProjects = modProjectsMapper.selectList(projectWrapper);
-        
-        if (!userProjects.isEmpty()) {
-            // 批量更新用户创建的项目的组织ID
-            for (ModProjects project : userProjects) {
-                project.setOrganizationId(newOrgId); // 可能为null，表示移出组织
-                modProjectsMapper.updateById(project);
-            }
-            
-            log.info("已同步更新用户 {} 创建的 {} 个项目的所属组织为: {}", 
-                    userId, userProjects.size(), newOrganizationName);
-        }
-
+        int updatedProjectsCount = syncUserProjectsOrganization(userId, newOrgId);
         log.info("用户 {} 的组织已修改为: {}", userId, newOrganizationName);
-        
-        // 5. 返回成功结果，包含新的组织名称和同步更新的项目数量
-        Map<String, Object> resultData = new HashMap<>();
-        resultData.put("newOrganization", newOrganizationName);
-        resultData.put("updatedProjectsCount", userProjects.size());
-        return ApiResult.success(resultData, "用户组织修改成功，已同步更新相关项目");
+        return buildUserOrganizationChangeResult(newOrganizationName, updatedProjectsCount);
     }
 
     @Override
@@ -484,13 +496,14 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
             return UserOrganizationVO.builder()
                     .orgId(-1)
                     .orgName("")
+                    .isGroupAdmin(0)
                     .build();
         }
 
         Integer userId = currentUser.getId().intValue();
         
         // 2. 查询用户组织关联
-        UserOrganization userOrg = getUserOrganization(userId);
+        UserOrganization userOrg = getUserOrganizationRelation(userId);
         
         // 3. 如果用户未加入任何组织
         if (userOrg == null) {
@@ -498,6 +511,7 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
             return UserOrganizationVO.builder()
                     .orgId(-1)
                     .orgName("")
+                    .isGroupAdmin(0)
                     .build();
         }
         
@@ -508,6 +522,7 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
             return UserOrganizationVO.builder()
                     .orgId(-1)
                     .orgName("")
+                    .isGroupAdmin(0)
                     .build();
         }
         
@@ -516,7 +531,48 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
         return UserOrganizationVO.builder()
                 .orgId(organization.getOrgId())
                 .orgName(organization.getOrgName())
+                .isGroupAdmin(userOrg.getIsGroupAdmin())
                 .build();
+    }
+
+    private int countGroupAdmins(Integer orgId) {
+        LambdaQueryWrapper<UserOrganization> adminWrapper = new LambdaQueryWrapper<>();
+        adminWrapper.eq(UserOrganization::getOrgId, orgId)
+                .eq(UserOrganization::getIsGroupAdmin, 1);
+        return Math.toIntExact(userOrganizationMapper.selectCount(adminWrapper));
+    }
+
+    private int syncUserProjectsOrganization(Integer userId, Integer orgId) {
+        LambdaQueryWrapper<ModProjects> projectWrapper = new LambdaQueryWrapper<>();
+        projectWrapper.eq(ModProjects::getCreator, userId);
+        List<ModProjects> userProjects = modProjectsMapper.selectList(projectWrapper);
+
+        if (!userProjects.isEmpty()) {
+            for (ModProjects project : userProjects) {
+                project.setOrganizationId(orgId);
+                modProjectsMapper.updateById(project);
+            }
+
+            log.info("已同步更新用户 {} 创建的 {} 个项目的所属组织为: {}", userId, userProjects.size(), getOrganizationName(orgId));
+        }
+
+        return userProjects.size();
+    }
+
+    private ApiResult<Object> buildUserOrganizationChangeResult(String organizationName, int updatedProjectsCount) {
+        Map<String, Object> resultData = new HashMap<>();
+        resultData.put("newOrganization", organizationName);
+        resultData.put("updatedProjectsCount", updatedProjectsCount);
+        return ApiResult.success(resultData, "用户组织修改成功，已同步更新相关项目");
+    }
+
+    private String getOrganizationName(Integer orgId) {
+        if (orgId == null) {
+            return "无";
+        }
+
+        Organization organization = organizationMapper.selectById(orgId);
+        return organization != null ? organization.getOrgName() : "无";
     }
 
 }

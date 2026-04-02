@@ -21,6 +21,27 @@ public interface IPermissionService {
      * @return 是否是管理员
      */
     boolean isCurrentUserAdmin();
+
+    /**
+     * 检查当前用户是否为系统管理员
+     * @return 是否为系统管理员
+     */
+    boolean isCurrentUserSystemAdmin();
+
+    /**
+     * 检查指定用户是否为指定组织的组管理员
+     * @param userId 用户ID
+     * @param orgId 组织ID
+     * @return 是否为组管理员
+     */
+    boolean isGroupAdmin(Integer userId, Integer orgId);
+
+    /**
+     * 检查当前用户是否可以管理指定组织
+     * @param orgId 组织ID
+     * @return 是否可以管理
+     */
+    boolean canManageOrganization(Integer orgId);
     
     /**
      * 安全地修改用户权限（带并发控制）
@@ -52,4 +73,4 @@ public interface IPermissionService {
      * @return 是否合法
      */
     boolean validatePermissionChange(Integer operatorUserId, Integer targetUserId, Integer newPermission);
-} 
+}

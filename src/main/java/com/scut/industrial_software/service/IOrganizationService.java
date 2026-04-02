@@ -6,6 +6,7 @@ import com.scut.industrial_software.model.dto.AddMembersDTO;
 import com.scut.industrial_software.model.dto.CreateOrganizationDTO;
 import com.scut.industrial_software.model.dto.MemberPageQueryDTO;
 import com.scut.industrial_software.model.dto.OrganizationPageQueryDTO;
+import com.scut.industrial_software.model.dto.UpdateGroupAdminDTO;
 import com.scut.industrial_software.model.entity.Organization;
 import com.scut.industrial_software.model.vo.MemberVO;
 import com.scut.industrial_software.model.vo.OrganizationVO;
@@ -52,6 +53,15 @@ public interface IOrganizationService extends IService<Organization> {
     ApiResult<Object> removeMemberFromOrganization(Integer orgId, Integer memberId);
 
     /**
+     * 修改组成员管理员状态
+     * @param orgId 组织ID
+     * @param memberId 成员ID
+     * @param updateDTO 管理员状态
+     * @return 操作结果
+     */
+    ApiResult<Object> updateGroupAdminStatus(Integer orgId, Integer memberId, UpdateGroupAdminDTO updateDTO);
+
+    /**
      * 分页查询组织成员列表
      * @param orgId 组织ID
      * @param queryDTO 查询参数
@@ -65,4 +75,4 @@ public interface IOrganizationService extends IService<Organization> {
      * @return 未分配成员列表
      */
     PageVO<MemberVO> getUnassignedMembers(MemberPageQueryDTO queryDTO);
-} 
+}

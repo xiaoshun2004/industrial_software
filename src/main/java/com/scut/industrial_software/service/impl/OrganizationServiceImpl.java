@@ -10,6 +10,7 @@ import com.scut.industrial_software.model.dto.AddMembersDTO;
 import com.scut.industrial_software.model.dto.CreateOrganizationDTO;
 import com.scut.industrial_software.model.dto.MemberPageQueryDTO;
 import com.scut.industrial_software.model.dto.OrganizationPageQueryDTO;
+import com.scut.industrial_software.model.dto.UpdateGroupAdminDTO;
 import com.scut.industrial_software.model.dto.UserDTO;
 import com.scut.industrial_software.model.entity.ModUsers;
 import com.scut.industrial_software.model.entity.Organization;
@@ -19,11 +20,13 @@ import com.scut.industrial_software.model.vo.OrganizationVO;
 import com.scut.industrial_software.model.vo.PageVO;
 import com.scut.industrial_software.service.IModUsersService;
 import com.scut.industrial_software.service.IOrganizationService;
+import com.scut.industrial_software.service.IPermissionService;
 import com.scut.industrial_software.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -46,6 +49,9 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
 
     @Autowired
     private IModUsersService modUsersService;
+
+    @Autowired
+    private IPermissionService permissionService;
 
     /**
      * 分页查询组织列表
@@ -75,12 +81,13 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
      * @return 创建结果
      */
     @Override
+    @Transactional
     public ApiResult<Object> createOrganization(CreateOrganizationDTO createDTO) {
         // 1. 检查组织名称是否已存在
         LambdaQueryWrapper<Organization> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Organization::getOrgName, createDTO.getOrgName());
         Organization existingOrg = this.getOne(wrapper);
-        
+
         if (existingOrg != null) {
             return ApiResult.failed("组织名称已存在");
         }
@@ -89,6 +96,10 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
         UserDTO currentUser = UserHolder.getUser();
         if (currentUser == null || currentUser.getId() == null) {
             return ApiResult.failed("用户未登录");
+        }
+
+        if (modUsersService.getUserOrganizationRelation(currentUser.getId()) != null) {
+            return ApiResult.failed("用户已加入其他组织，无法重复创建组织");
         }
 
         // 3. 创建组织
@@ -102,6 +113,16 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
         boolean saveResult = this.save(organization);
         if (!saveResult) {
             return ApiResult.failed("组织创建失败");
+        }
+
+        ApiResult<Object> relationResult = modUsersService.updateUserOrganizationRelation(
+                currentUser.getId(),
+                organization.getOrgId(),
+                true
+        );
+        if (relationResult.getCode() != 200L) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            return relationResult;
         }
 
         log.info("用户 {} 创建了新组织：{}", currentUser.getId(), createDTO.getOrgName());
@@ -123,26 +144,28 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
             return ApiResult.failed("组织不存在");
         }
 
+        ApiResult<Object> permissionResult = validateOrganizationPermission(orgId);
+        if (permissionResult != null) {
+            return permissionResult;
+        }
+
         // 2. 验证用户ID并转换为Integer
         List<Integer> userIdList = new ArrayList<>();
         for (String userIdStr : addMembersDTO.getUserIds()) {
             try {
                 Integer userId = Integer.valueOf(userIdStr);
-                
+
                 // 检查用户是否存在
                 ModUsers user = modUsersService.getById(userId);
                 if (user == null) {
                     return ApiResult.failed("用户ID " + userIdStr + " 不存在");
                 }
-                
-                // 检查用户是否已经在组织中
-                LambdaQueryWrapper<UserOrganization> wrapper = new LambdaQueryWrapper<>();
-                wrapper.eq(UserOrganization::getUserId, userId)
-                       .eq(UserOrganization::getOrgId, orgId);
-                UserOrganization existingRelation = userOrganizationMapper.selectOne(wrapper);
-                
+
+                UserOrganization existingRelation = modUsersService.getUserOrganizationRelation(userId);
                 if (existingRelation == null) {
                     userIdList.add(userId);
+                } else if (!orgId.equals(existingRelation.getOrgId())) {
+                    return ApiResult.failed("用户ID " + userIdStr + " 已加入其他组织");
                 }
             } catch (NumberFormatException e) {
                 return ApiResult.failed("用户ID格式不正确：" + userIdStr);
@@ -153,18 +176,12 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
             return ApiResult.failed("所有用户都已经在该组织中");
         }
 
-        // 3. 批量添加关联关系
-        List<UserOrganization> relations = new ArrayList<>();
         for (Integer userId : userIdList) {
-            relations.add(UserOrganization.builder()
-                    .userId(userId)
-                    .orgId(orgId)
-                    .build());
-        }
-
-        // 4. 批量插入
-        for (UserOrganization relation : relations) {
-            userOrganizationMapper.insert(relation);
+            ApiResult<Object> result = modUsersService.updateUserOrganizationRelation(userId, orgId, false);
+            if (result.getCode() != 200L) {
+                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+                return result;
+            }
         }
 
         log.info("成功添加 {} 个成员到组织 {}", userIdList.size(), orgId);
@@ -186,6 +203,11 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
             return ApiResult.failed("组织不存在");
         }
 
+        ApiResult<Object> permissionResult = validateOrganizationPermission(orgId);
+        if (permissionResult != null) {
+            return permissionResult;
+        }
+
         // 2. 检查用户是否存在
         ModUsers user = modUsersService.getById(memberId);
         if (user == null) {
@@ -195,21 +217,75 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
         // 3. 检查用户组织关联关系是否存在
         LambdaQueryWrapper<UserOrganization> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(UserOrganization::getUserId, memberId)
-               .eq(UserOrganization::getOrgId, orgId);
+                .eq(UserOrganization::getOrgId, orgId);
         UserOrganization relation = userOrganizationMapper.selectOne(wrapper);
 
         if (relation == null) {
             return ApiResult.failed("该用户不在此组织中");
         }
 
-        // 4. 删除关联关系
-        int result = userOrganizationMapper.delete(wrapper);
-        if (result > 0) {
+        if (Integer.valueOf(1).equals(relation.getIsGroupAdmin()) && countGroupAdmins(orgId) <= 1) {
+            return ApiResult.failed("组织至少保留一名组管理员");
+        }
+
+        ApiResult<Object> result = modUsersService.updateUserOrganizationRelation(memberId, null, false);
+        if (result.getCode() == 200L) {
             log.info("成功从组织 {} 中移除成员 {}", orgId, memberId);
             return ApiResult.success("成功移除组织成员");
-        } else {
-            return ApiResult.failed("移除成员失败");
         }
+
+        TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+        return result;
+    }
+
+    /**
+     * 修改组成员管理员状态
+     * @param orgId 组织ID
+     * @param memberId 成员ID
+     * @param updateDTO 管理员状态
+     * @return 操作结果
+     */
+    @Override
+    @Transactional
+    public ApiResult<Object> updateGroupAdminStatus(Integer orgId, Integer memberId, UpdateGroupAdminDTO updateDTO) {
+        Organization organization = this.getById(orgId);
+        if (organization == null) {
+            return ApiResult.failed("组织不存在");
+        }
+
+        ApiResult<Object> permissionResult = validateOrganizationPermission(orgId);
+        if (permissionResult != null) {
+            return permissionResult;
+        }
+
+        ModUsers user = modUsersService.getById(memberId);
+        if (user == null) {
+            return ApiResult.failed("用户不存在");
+        }
+
+        LambdaQueryWrapper<UserOrganization> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserOrganization::getUserId, memberId)
+                .eq(UserOrganization::getOrgId, orgId);
+        UserOrganization relation = userOrganizationMapper.selectOne(wrapper);
+        if (relation == null) {
+            return ApiResult.failed("该用户不在此组织中");
+        }
+
+        int targetAdminFlag = Boolean.TRUE.equals(updateDTO.getIsGroupAdmin()) ? 1 : 0;
+        if (Integer.valueOf(targetAdminFlag).equals(relation.getIsGroupAdmin())) {
+            return ApiResult.success("组管理员状态未变化");
+        }
+
+        if (targetAdminFlag == 0 && countGroupAdmins(orgId) <= 1) {
+            return ApiResult.failed("组织至少保留一名组管理员");
+        }
+
+        relation.setIsGroupAdmin(targetAdminFlag);
+        int updated = userOrganizationMapper.update(relation, wrapper);
+        if (updated > 0) {
+            return ApiResult.success("组管理员状态更新成功");
+        }
+        return ApiResult.failed("组管理员状态更新失败");
     }
 
     /**
@@ -268,4 +344,18 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
                 queryDTO.getPageSize()
         );
     }
-} 
+
+    private ApiResult<Object> validateOrganizationPermission(Integer orgId) {
+        if (!permissionService.canManageOrganization(orgId)) {
+            return ApiResult.forbidden("没有权限执行此操作");
+        }
+        return null;
+    }
+
+    private int countGroupAdmins(Integer orgId) {
+        LambdaQueryWrapper<UserOrganization> adminWrapper = new LambdaQueryWrapper<>();
+        adminWrapper.eq(UserOrganization::getOrgId, orgId)
+                .eq(UserOrganization::getIsGroupAdmin, 1);
+        return Math.toIntExact(userOrganizationMapper.selectCount(adminWrapper));
+    }
+}

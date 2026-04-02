@@ -23,4 +23,9 @@ public class UserOrganizationVO {
      * 组织名称，如果用户未加入组织则为空字符串
      */
     private String orgName;
-} 
+
+    /**
+     * 是否为组管理员：0-否，1-是
+     */
+    private Integer isGroupAdmin;
+}

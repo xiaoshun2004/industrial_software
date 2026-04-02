@@ -587,6 +587,7 @@ DROP TABLE IF EXISTS `user_organization`;
 CREATE TABLE `user_organization` (
   `user_id` int NOT NULL COMMENT '用户ID',
   `org_id` int NOT NULL COMMENT '组织ID',
+  `is_group_admin` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否为组管理员：0-否，1-是',
   PRIMARY KEY (`user_id`,`org_id`) USING BTREE,
   KEY `org_id` (`org_id`) USING BTREE,
   CONSTRAINT `user_organization_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `mod_users` (`user_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
@@ -600,7 +601,7 @@ CREATE TABLE `user_organization` (
 
 LOCK TABLES `user_organization` WRITE;
 /*!40000 ALTER TABLE `user_organization` DISABLE KEYS */;
-INSERT INTO `user_organization` VALUES (1,1),(2,1),(5,1),(19,1);
+INSERT INTO `user_organization` VALUES (1,1,1),(2,1,0),(5,1,0),(19,1,0);
 /*!40000 ALTER TABLE `user_organization` ENABLE KEYS */;
 UNLOCK TABLES;
 

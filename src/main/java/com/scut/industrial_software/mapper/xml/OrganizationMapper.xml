@@ -21,7 +21,8 @@
     <select id="selectOrganizationMembers" resultType="com.scut.industrial_software.model.vo.MemberVO">
         SELECT 
             CAST(u.user_id AS CHAR) as userId,
-            u.username as userName
+            u.username as userName,
+            uo.is_group_admin as isGroupAdmin
         FROM user_organization uo
         INNER JOIN mod_users u ON uo.user_id = u.user_id
         WHERE uo.org_id = #{orgId}
@@ -40,4 +41,4 @@
         ORDER BY u.username
     </select>
 
-</mapper> 
+</mapper>

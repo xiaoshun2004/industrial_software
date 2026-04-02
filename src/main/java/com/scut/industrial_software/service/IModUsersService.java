@@ -3,6 +3,7 @@ package com.scut.industrial_software.service;
 import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.model.dto.*;
 import com.scut.industrial_software.model.entity.ModUsers;
+import com.scut.industrial_software.model.entity.UserOrganization;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.scut.industrial_software.model.vo.PageVO;
 import com.scut.industrial_software.model.vo.UserInfoVO;
@@ -105,6 +106,22 @@ public interface IModUsersService extends IService<ModUsers> {
      * @return 操作结果，包含新组织名称和同步更新的项目数量
      */
     ApiResult<Object> changeUserOrganization(UserOrganizationDTO userOrganizationDTO);
+
+    /**
+     * 更新用户组织关联，并同步更新其创建项目的组织归属
+     * @param userId 用户ID
+     * @param orgId 目标组织ID，null表示移出组织
+     * @param isGroupAdmin 是否组管理员，null表示沿用现有值或默认值
+     * @return 操作结果
+     */
+    ApiResult<Object> updateUserOrganizationRelation(Integer userId, Integer orgId, Boolean isGroupAdmin);
+
+    /**
+     * 获取用户当前组织关联
+     * @param userId 用户ID
+     * @return 用户组织关联
+     */
+    UserOrganization getUserOrganizationRelation(Integer userId);
 
     /**
      * 获取当前登录用户的组织信息

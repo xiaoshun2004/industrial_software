@@ -17,4 +17,9 @@ public class MemberVO {
      * 成员姓名
      */
     private String userName;
-} 
+
+    /**
+     * 是否为组管理员：0-否，1-是
+     */
+    private Integer isGroupAdmin;
+}

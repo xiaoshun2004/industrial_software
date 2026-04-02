@@ -5,6 +5,7 @@ import com.scut.industrial_software.model.dto.AddMembersDTO;
 import com.scut.industrial_software.model.dto.CreateOrganizationDTO;
 import com.scut.industrial_software.model.dto.MemberPageQueryDTO;
 import com.scut.industrial_software.model.dto.OrganizationPageQueryDTO;
+import com.scut.industrial_software.model.dto.UpdateGroupAdminDTO;
 import com.scut.industrial_software.model.vo.MemberVO;
 import com.scut.industrial_software.model.vo.OrganizationVO;
 import com.scut.industrial_software.model.vo.PageVO;
@@ -88,6 +89,23 @@ public class OrganizationController {
     }
 
     /**
+     * 修改组成员管理员状态
+     * @param orgId 组织ID
+     * @param memberId 成员ID
+     * @param updateDTO 管理员状态
+     * @return 操作结果
+     */
+    @PutMapping("/{orgId}/members/{memberId}/group-admin")
+    public ApiResult<Object> updateGroupAdminStatus(
+            @PathVariable Integer orgId,
+            @PathVariable Integer memberId,
+            @Valid @RequestBody UpdateGroupAdminDTO updateDTO) {
+        log.info("修改组管理员状态，组织ID：{}，成员ID：{}，目标状态：{}", orgId, memberId, updateDTO.getIsGroupAdmin());
+
+        return organizationService.updateGroupAdminStatus(orgId, memberId, updateDTO);
+    }
+
+    /**
      * 获取组织成员列表
      * @param orgId 组织ID
      * @param queryDTO 查询参数
@@ -119,4 +137,4 @@ public class OrganizationController {
         
         return ApiResult.success(pageResult);
     }
-} 
+}

@@ -67,6 +67,44 @@ public class PermissionServiceImpl implements IPermissionService {
             return false;
         }
     }
+
+    @Override
+    public boolean isCurrentUserSystemAdmin() {
+        return isCurrentUserAdmin();
+    }
+
+    @Override
+    public boolean isGroupAdmin(Integer userId, Integer orgId) {
+        if (userId == null || orgId == null) {
+            return false;
+        }
+
+        try {
+            com.scut.industrial_software.model.entity.UserOrganization relation =
+                    modUsersService.getUserOrganizationRelation(userId);
+            return relation != null
+                    && orgId.equals(relation.getOrgId())
+                    && Integer.valueOf(1).equals(relation.getIsGroupAdmin());
+        } catch (Exception e) {
+            log.error("检查组管理员权限时发生异常，用户ID: {}，组织ID: {}", userId, orgId, e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean canManageOrganization(Integer orgId) {
+        if (orgId == null) {
+            return false;
+        }
+
+        try {
+            Integer currentUserId = UserHolder.getUser().getId();
+            return isCurrentUserSystemAdmin() || isGroupAdmin(currentUserId, orgId);
+        } catch (Exception e) {
+            log.error("检查组织管理权限时发生异常，组织ID: {}", orgId, e);
+            return false;
+        }
+    }
     
     @Override
     public ApiResult<Object> changeUserPermissionSafely(Integer targetUserId, Integer newPermission) {
@@ -202,4 +240,4 @@ public class PermissionServiceImpl implements IPermissionService {
             return false;
         }
     }
-} 
+}

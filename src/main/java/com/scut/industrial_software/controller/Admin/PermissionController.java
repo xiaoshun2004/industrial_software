@@ -81,7 +81,11 @@ public class PermissionController {
     public ApiResult<Object> changeUserOrganization(@Valid @RequestBody UserOrganizationDTO organizationDTO) {
         log.info("修改用户组织，用户ID: {}, 目标组织ID: {}", 
                 organizationDTO.getUserId(), organizationDTO.getOrgId());
-        
+
+        if (!permissionService.isCurrentUserSystemAdmin()) {
+            return ApiResult.forbidden("没有权限执行此操作");
+        }
+
         return modUsersService.changeUserOrganization(organizationDTO);
     }
-} 
+}
