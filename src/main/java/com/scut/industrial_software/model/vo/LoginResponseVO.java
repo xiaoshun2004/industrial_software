@@ -34,6 +34,11 @@ public class LoginResponseVO {
     private Integer permission;
 
     /**
+     * 组内权限：0-普通成员，1-组管理员
+     */
+    private Integer taskPermission;
+
+    /**
      * 用户电话号码
      */
     private String phone;

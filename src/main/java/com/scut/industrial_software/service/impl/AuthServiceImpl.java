@@ -92,6 +92,7 @@ public class AuthServiceImpl implements IAuthService {
                 .token(token)
                 .permission(user.getPermission())
                 .phone(user.getPhone())
+                .taskPermission(user.getTaskPermission())
                 .build();
     }
 
@@ -112,4 +113,4 @@ public class AuthServiceImpl implements IAuthService {
         
         return isValid;
     }
-} 
+}

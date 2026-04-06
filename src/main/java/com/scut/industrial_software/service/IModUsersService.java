@@ -111,10 +111,10 @@ public interface IModUsersService extends IService<ModUsers> {
      * 更新用户组织关联，并同步更新其创建项目的组织归属
      * @param userId 用户ID
      * @param orgId 目标组织ID，null表示移出组织
-     * @param isGroupAdmin 是否组管理员，null表示沿用现有值或默认值
+     * @param taskPermission 组内权限，null表示沿用现有值或默认值
      * @return 操作结果
      */
-    ApiResult<Object> updateUserOrganizationRelation(Integer userId, Integer orgId, Boolean isGroupAdmin);
+    ApiResult<Object> updateUserOrganizationRelation(Integer userId, Integer orgId, Integer taskPermission);
 
     /**
      * 获取用户当前组织关联

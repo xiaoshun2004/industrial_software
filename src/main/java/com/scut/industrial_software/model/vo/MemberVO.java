@@ -21,5 +21,5 @@ public class MemberVO {
     /**
      * 是否为组管理员：0-否，1-是
      */
-    private Integer isGroupAdmin;
+    private Integer taskPermission;
 }

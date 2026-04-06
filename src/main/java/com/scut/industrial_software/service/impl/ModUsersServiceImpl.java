@@ -93,7 +93,7 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
                 .password(encodedPassword)
                 .permission(dto.getPermission())
                 .phone(dto.getPhone())  // 添加电话号码
-                .taskPermission(1)  // 默认组织权限
+                .taskPermission(0)  // 默认普通成员权限
                 .build();
 
         baseMapper.insert(addUsers);
@@ -429,24 +429,49 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
 
     @Override
     @Transactional
-    public ApiResult<Object> updateUserOrganizationRelation(Integer userId, Integer orgId, Boolean isGroupAdmin) {
+    public ApiResult<Object> updateUserOrganizationRelation(Integer userId, Integer orgId, Integer taskPermission) {
         ModUsers user = baseMapper.selectById(userId);
         if (user == null) {
             return ApiResult.failed("用户不存在");
         }
 
-        UserOrganization existingRelation = getUserOrganizationRelation(userId);
-        Integer targetAdminFlag = isGroupAdmin == null ? null : (Boolean.TRUE.equals(isGroupAdmin) ? 1 : 0);
+        if (taskPermission != null && !Integer.valueOf(0).equals(taskPermission) && !Integer.valueOf(1).equals(taskPermission)) {
+            return ApiResult.failed("组内权限只能为0或1");
+        }
 
-        if (existingRelation != null && Integer.valueOf(1).equals(existingRelation.getIsGroupAdmin())) {
+        UserOrganization existingRelation = getUserOrganizationRelation(userId);
+
+        Integer currentTaskPermission = user.getTaskPermission() == null ? 0 : user.getTaskPermission();
+        if (existingRelation != null && Integer.valueOf(1).equals(currentTaskPermission)) {
             boolean leavingCurrentOrg = orgId == null || !existingRelation.getOrgId().equals(orgId);
-            boolean downgradingCurrentOrg = existingRelation.getOrgId().equals(orgId) && Integer.valueOf(0).equals(targetAdminFlag);
+            boolean downgradingCurrentOrg = existingRelation.getOrgId().equals(orgId) && Integer.valueOf(0).equals(taskPermission);
             if ((leavingCurrentOrg || downgradingCurrentOrg) && countGroupAdmins(existingRelation.getOrgId()) <= 1) {
                 return ApiResult.failed("组织至少保留一名组管理员");
             }
         }
 
-        if (existingRelation != null && orgId != null && existingRelation.getOrgId().equals(orgId) && targetAdminFlag == null) {
+        if (orgId != null) {
+            Organization organization = organizationMapper.selectById(orgId);
+            if (organization == null) {
+                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+                return ApiResult.failed("目标组织不存在");
+            }
+        }
+
+        Integer finalTaskPermission;
+        if (orgId == null) {
+            finalTaskPermission = 0;
+        } else if (taskPermission != null) {
+            finalTaskPermission = taskPermission;
+        } else if (existingRelation != null && orgId.equals(existingRelation.getOrgId())) {
+            finalTaskPermission = currentTaskPermission;
+        } else {
+            finalTaskPermission = 0;
+        }
+
+        if (existingRelation != null && orgId != null && existingRelation.getOrgId().equals(orgId)) {
+            user.setTaskPermission(finalTaskPermission);
+            baseMapper.updateById(user);
             int updatedProjectsCount = syncUserProjectsOrganization(userId, orgId);
             return buildUserOrganizationChangeResult(getOrganizationName(orgId), updatedProjectsCount);
         }
@@ -457,30 +482,19 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
 
         String newOrganizationName = "无";
         Integer newOrgId = null;
-        Integer finalAdminFlag = 0;
 
         if (orgId != null) {
-            Organization organization = organizationMapper.selectById(orgId);
-            if (organization == null) {
-                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-                return ApiResult.failed("目标组织不存在");
-            }
-
             newOrgId = orgId;
-            newOrganizationName = organization.getOrgName();
-            if (targetAdminFlag != null) {
-                finalAdminFlag = targetAdminFlag;
-            } else if (existingRelation != null && orgId.equals(existingRelation.getOrgId())) {
-                finalAdminFlag = existingRelation.getIsGroupAdmin();
-            }
-
+            newOrganizationName = getOrganizationName(orgId);
             UserOrganization newUserOrg = UserOrganization.builder()
                     .userId(userId)
                     .orgId(newOrgId)
-                    .isGroupAdmin(finalAdminFlag)
                     .build();
             userOrganizationMapper.insert(newUserOrg);
         }
+
+        user.setTaskPermission(finalTaskPermission);
+        baseMapper.updateById(user);
 
         int updatedProjectsCount = syncUserProjectsOrganization(userId, newOrgId);
         log.info("用户 {} 的组织已修改为: {}", userId, newOrganizationName);
@@ -496,25 +510,25 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
             return UserOrganizationVO.builder()
                     .orgId(-1)
                     .orgName("")
-                    .isGroupAdmin(0)
+                    .taskPermission(0)
                     .build();
         }
 
         Integer userId = currentUser.getId().intValue();
-        
+
         // 2. 查询用户组织关联
         UserOrganization userOrg = getUserOrganizationRelation(userId);
-        
+
         // 3. 如果用户未加入任何组织
         if (userOrg == null) {
             log.info("用户 {} 未加入任何组织", userId);
             return UserOrganizationVO.builder()
                     .orgId(-1)
                     .orgName("")
-                    .isGroupAdmin(0)
+                    .taskPermission(0)
                     .build();
         }
-        
+
         // 4. 查询组织信息
         Organization organization = organizationMapper.selectById(userOrg.getOrgId());
         if (organization == null) {
@@ -522,24 +536,35 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
             return UserOrganizationVO.builder()
                     .orgId(-1)
                     .orgName("")
-                    .isGroupAdmin(0)
+                    .taskPermission(0)
                     .build();
         }
-        
+
+        ModUsers user = baseMapper.selectById(userId);
+        Integer currentTaskPermission = user == null || user.getTaskPermission() == null ? 0 : user.getTaskPermission();
+
         // 5. 返回用户组织信息
         log.info("成功获取用户 {} 的组织信息：{}", userId, organization.getOrgName());
         return UserOrganizationVO.builder()
                 .orgId(organization.getOrgId())
                 .orgName(organization.getOrgName())
-                .isGroupAdmin(userOrg.getIsGroupAdmin())
+                .taskPermission(currentTaskPermission)
                 .build();
     }
 
     private int countGroupAdmins(Integer orgId) {
-        LambdaQueryWrapper<UserOrganization> adminWrapper = new LambdaQueryWrapper<>();
-        adminWrapper.eq(UserOrganization::getOrgId, orgId)
-                .eq(UserOrganization::getIsGroupAdmin, 1);
-        return Math.toIntExact(userOrganizationMapper.selectCount(adminWrapper));
+        LambdaQueryWrapper<UserOrganization> relationWrapper = new LambdaQueryWrapper<>();
+        relationWrapper.eq(UserOrganization::getOrgId, orgId);
+        List<UserOrganization> relations = userOrganizationMapper.selectList(relationWrapper);
+        if (relations.isEmpty()) {
+            return 0;
+        }
+
+        List<Integer> userIds = relations.stream().map(UserOrganization::getUserId).toList();
+        LambdaQueryWrapper<ModUsers> adminWrapper = new LambdaQueryWrapper<>();
+        adminWrapper.in(ModUsers::getUserId, userIds)
+                .eq(ModUsers::getTaskPermission, 1);
+        return Math.toIntExact(baseMapper.selectCount(adminWrapper));
     }
 
     private int syncUserProjectsOrganization(Integer userId, Integer orgId) {

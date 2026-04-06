@@ -34,7 +34,7 @@ public interface IPermissionService {
      * @param orgId 组织ID
      * @return 是否为组管理员
      */
-    boolean isGroupAdmin(Integer userId, Integer orgId);
+    boolean hasOrganizationAdminPermission(Integer userId, Integer orgId);
 
     /**
      * 检查当前用户是否可以管理指定组织

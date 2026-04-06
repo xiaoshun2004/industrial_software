@@ -118,7 +118,7 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
         ApiResult<Object> relationResult = modUsersService.updateUserOrganizationRelation(
                 currentUser.getId(),
                 organization.getOrgId(),
-                true
+                1
         );
         if (relationResult.getCode() != 200L) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
@@ -177,7 +177,7 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
         }
 
         for (Integer userId : userIdList) {
-            ApiResult<Object> result = modUsersService.updateUserOrganizationRelation(userId, orgId, false);
+            ApiResult<Object> result = modUsersService.updateUserOrganizationRelation(userId, orgId, 0);
             if (result.getCode() != 200L) {
                 TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
                 return result;
@@ -224,11 +224,11 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
             return ApiResult.failed("该用户不在此组织中");
         }
 
-        if (Integer.valueOf(1).equals(relation.getIsGroupAdmin()) && countGroupAdmins(orgId) <= 1) {
+        if (Integer.valueOf(1).equals(user.getTaskPermission()) && countGroupAdmins(orgId) <= 1) {
             return ApiResult.failed("组织至少保留一名组管理员");
         }
 
-        ApiResult<Object> result = modUsersService.updateUserOrganizationRelation(memberId, null, false);
+        ApiResult<Object> result = modUsersService.updateUserOrganizationRelation(memberId, null, 0);
         if (result.getCode() == 200L) {
             log.info("成功从组织 {} 中移除成员 {}", orgId, memberId);
             return ApiResult.success("成功移除组织成员");
@@ -247,7 +247,7 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
      */
     @Override
     @Transactional
-    public ApiResult<Object> updateGroupAdminStatus(Integer orgId, Integer memberId, UpdateGroupAdminDTO updateDTO) {
+    public ApiResult<Object> updateMemberTaskPermission(Integer orgId, Integer memberId, UpdateGroupAdminDTO updateDTO) {
         Organization organization = this.getById(orgId);
         if (organization == null) {
             return ApiResult.failed("组织不存在");
@@ -271,21 +271,21 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
             return ApiResult.failed("该用户不在此组织中");
         }
 
-        int targetAdminFlag = Boolean.TRUE.equals(updateDTO.getIsGroupAdmin()) ? 1 : 0;
-        if (Integer.valueOf(targetAdminFlag).equals(relation.getIsGroupAdmin())) {
-            return ApiResult.success("组管理员状态未变化");
+        int targetAdminFlag = updateDTO.getTaskPermission();
+        if (Integer.valueOf(targetAdminFlag).equals(user.getTaskPermission())) {
+            return ApiResult.success("组内权限未变化");
         }
 
-        if (targetAdminFlag == 0 && countGroupAdmins(orgId) <= 1) {
+        if (targetAdminFlag == 0 && Integer.valueOf(1).equals(user.getTaskPermission()) && countGroupAdmins(orgId) <= 1) {
             return ApiResult.failed("组织至少保留一名组管理员");
         }
 
-        relation.setIsGroupAdmin(targetAdminFlag);
-        int updated = userOrganizationMapper.update(relation, wrapper);
-        if (updated > 0) {
-            return ApiResult.success("组管理员状态更新成功");
+        ApiResult<Object> result = modUsersService.updateUserOrganizationRelation(memberId, orgId, targetAdminFlag);
+        if (result.getCode() == 200L) {
+            return ApiResult.success("组内权限更新成功");
         }
-        return ApiResult.failed("组管理员状态更新失败");
+        TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+        return result;
     }
 
     /**
@@ -353,9 +353,21 @@ public class OrganizationServiceImpl extends ServiceImpl<OrganizationMapper, Org
     }
 
     private int countGroupAdmins(Integer orgId) {
-        LambdaQueryWrapper<UserOrganization> adminWrapper = new LambdaQueryWrapper<>();
-        adminWrapper.eq(UserOrganization::getOrgId, orgId)
-                .eq(UserOrganization::getIsGroupAdmin, 1);
-        return Math.toIntExact(userOrganizationMapper.selectCount(adminWrapper));
+        LambdaQueryWrapper<UserOrganization> relationWrapper = new LambdaQueryWrapper<>();
+        relationWrapper.eq(UserOrganization::getOrgId, orgId);
+        List<UserOrganization> relations = userOrganizationMapper.selectList(relationWrapper);
+        if (relations.isEmpty()) {
+            return 0;
+        }
+
+        List<Integer> userIds = new ArrayList<>();
+        for (UserOrganization relation : relations) {
+            userIds.add(relation.getUserId());
+        }
+
+        LambdaQueryWrapper<ModUsers> adminWrapper = new LambdaQueryWrapper<>();
+        adminWrapper.in(ModUsers::getUserId, userIds)
+                .eq(ModUsers::getTaskPermission, 1);
+        return Math.toIntExact(modUsersService.count(adminWrapper));
     }
 }

@@ -22,7 +22,7 @@
         SELECT 
             CAST(u.user_id AS CHAR) as userId,
             u.username as userName,
-            uo.is_group_admin as isGroupAdmin
+            u.task_permission as taskPermission
         FROM user_organization uo
         INNER JOIN mod_users u ON uo.user_id = u.user_id
         WHERE uo.org_id = #{orgId}

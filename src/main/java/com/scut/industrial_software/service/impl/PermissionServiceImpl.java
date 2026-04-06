@@ -74,17 +74,18 @@ public class PermissionServiceImpl implements IPermissionService {
     }
 
     @Override
-    public boolean isGroupAdmin(Integer userId, Integer orgId) {
+    public boolean hasOrganizationAdminPermission(Integer userId, Integer orgId) {
         if (userId == null || orgId == null) {
             return false;
         }
 
         try {
-            com.scut.industrial_software.model.entity.UserOrganization relation =
-                    modUsersService.getUserOrganizationRelation(userId);
+            com.scut.industrial_software.model.entity.UserOrganization relation = modUsersService.getUserOrganizationRelation(userId);
+            ModUsers user = modUsersService.getById(userId);
             return relation != null
                     && orgId.equals(relation.getOrgId())
-                    && Integer.valueOf(1).equals(relation.getIsGroupAdmin());
+                    && user != null
+                    && Integer.valueOf(1).equals(user.getTaskPermission());
         } catch (Exception e) {
             log.error("检查组管理员权限时发生异常，用户ID: {}，组织ID: {}", userId, orgId, e);
             return false;
@@ -99,7 +100,7 @@ public class PermissionServiceImpl implements IPermissionService {
 
         try {
             Integer currentUserId = UserHolder.getUser().getId();
-            return isCurrentUserSystemAdmin() || isGroupAdmin(currentUserId, orgId);
+            return isCurrentUserSystemAdmin() || hasOrganizationAdminPermission(currentUserId, orgId);
         } catch (Exception e) {
             log.error("检查组织管理权限时发生异常，组织ID: {}", orgId, e);
             return false;

@@ -86,26 +86,31 @@ class OrganizationServiceIntegrationTest {
         saveCurrentUser(1, "creator");
 
         CreateOrganizationDTO dto = new CreateOrganizationDTO();
-        dto.setOrgName("测试组织");
+        dto.setOrgName("test-org");
 
         ApiResult<Object> result = organizationService.createOrganization(dto);
 
         assertEquals(200L, result.getCode());
         Integer relationCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM user_organization WHERE user_id = 1 AND org_id = 1 AND is_group_admin = 1",
+                "SELECT COUNT(*) FROM user_organization WHERE user_id = 1 AND org_id = 1",
+                Integer.class
+        );
+        Integer taskPermission = jdbcTemplate.queryForObject(
+                "SELECT task_permission FROM mod_users WHERE user_id = 1",
                 Integer.class
         );
         assertEquals(Integer.valueOf(1), relationCount);
+        assertEquals(Integer.valueOf(1), taskPermission);
     }
 
     @Test
     void shouldRejectCreateOrganizationWhenUserAlreadyBelongsToAnotherOrganization() {
-        insertOrganization(1, "现有组织", 99);
-        insertUserOrganization(1, 1, 0);
+        insertOrganization(1, "existing-org", 99);
+        insertUserOrganization(1, 1);
         saveCurrentUser(1, "creator");
 
         CreateOrganizationDTO dto = new CreateOrganizationDTO();
-        dto.setOrgName("新组织");
+        dto.setOrgName("new-org");
 
         ApiResult<Object> result = organizationService.createOrganization(dto);
 
@@ -116,9 +121,10 @@ class OrganizationServiceIntegrationTest {
 
     @Test
     void shouldAllowGroupAdminToAddMemberAndSyncProjects() {
-        insertOrganization(1, "组织一", 1);
-        insertUserOrganization(1, 1, 1);
-        insertProject(100, "项目A", 3, null);
+        insertOrganization(1, "org-1", 1);
+        insertUserOrganization(1, 1);
+        updateUserTaskPermission(1, 1);
+        insertProject(100, "project-a", 3, null);
         saveCurrentUser(1, "creator");
 
         AddMembersDTO dto = new AddMembersDTO();
@@ -128,22 +134,28 @@ class OrganizationServiceIntegrationTest {
 
         assertEquals(200L, result.getCode());
         Integer relationCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM user_organization WHERE user_id = 3 AND org_id = 1 AND is_group_admin = 0",
+                "SELECT COUNT(*) FROM user_organization WHERE user_id = 3 AND org_id = 1",
                 Integer.class
         );
         Integer projectOrgId = jdbcTemplate.queryForObject(
                 "SELECT organization_id FROM mod_projects WHERE project_id = 100",
                 Integer.class
         );
+        Integer taskPermission = jdbcTemplate.queryForObject(
+                "SELECT task_permission FROM mod_users WHERE user_id = 3",
+                Integer.class
+        );
         assertEquals(Integer.valueOf(1), relationCount);
         assertEquals(Integer.valueOf(1), projectOrgId);
+        assertEquals(Integer.valueOf(0), taskPermission);
     }
 
     @Test
     void shouldRejectAddMemberForOrdinaryMember() {
-        insertOrganization(1, "组织一", 1);
-        insertUserOrganization(1, 1, 1);
-        insertUserOrganization(2, 1, 0);
+        insertOrganization(1, "org-1", 1);
+        insertUserOrganization(1, 1);
+        updateUserTaskPermission(1, 1);
+        insertUserOrganization(2, 1);
         saveCurrentUser(2, "member");
 
         AddMembersDTO dto = new AddMembersDTO();
@@ -161,8 +173,9 @@ class OrganizationServiceIntegrationTest {
 
     @Test
     void shouldPreventRemovingLastGroupAdmin() {
-        insertOrganization(1, "组织一", 1);
-        insertUserOrganization(1, 1, 1);
+        insertOrganization(1, "org-1", 1);
+        insertUserOrganization(1, 1);
+        updateUserTaskPermission(1, 1);
         saveCurrentUser(99, "sysadmin");
 
         ApiResult<Object> result = organizationService.removeMemberFromOrganization(1, 1);
@@ -177,40 +190,42 @@ class OrganizationServiceIntegrationTest {
 
     @Test
     void shouldUpdateGroupAdminStatusBySystemAdmin() {
-        insertOrganization(1, "组织一", 1);
-        insertUserOrganization(1, 1, 1);
-        insertUserOrganization(2, 1, 0);
+        insertOrganization(1, "org-1", 1);
+        insertUserOrganization(1, 1);
+        updateUserTaskPermission(1, 1);
+        insertUserOrganization(2, 1);
         saveCurrentUser(99, "sysadmin");
 
         UpdateGroupAdminDTO dto = new UpdateGroupAdminDTO();
-        dto.setIsGroupAdmin(true);
+        dto.setTaskPermission(1);
 
-        ApiResult<Object> result = organizationService.updateGroupAdminStatus(1, 2, dto);
+        ApiResult<Object> result = organizationService.updateMemberTaskPermission(1, 2, dto);
 
         assertEquals(200L, result.getCode());
-        Integer adminFlag = jdbcTemplate.queryForObject(
-                "SELECT is_group_admin FROM user_organization WHERE user_id = 2 AND org_id = 1",
+        Integer taskPermission = jdbcTemplate.queryForObject(
+                "SELECT task_permission FROM mod_users WHERE user_id = 2",
                 Integer.class
         );
-        assertEquals(Integer.valueOf(1), adminFlag);
+        assertEquals(Integer.valueOf(1), taskPermission);
     }
 
     @Test
     void shouldReturnGroupAdminFlagInCurrentUserOrganization() {
-        insertOrganization(1, "组织一", 2);
-        insertUserOrganization(2, 1, 1);
+        insertOrganization(1, "org-1", 2);
+        insertUserOrganization(2, 1);
+        updateUserTaskPermission(2, 1);
         saveCurrentUser(2, "member");
 
         UserOrganizationVO userOrganizationVO = modUsersService.getCurrentUserOrganization();
 
         assertNotNull(userOrganizationVO);
         assertEquals(Integer.valueOf(1), userOrganizationVO.getOrgId());
-        assertEquals(Integer.valueOf(1), userOrganizationVO.getIsGroupAdmin());
+        assertEquals(Integer.valueOf(1), userOrganizationVO.getTaskPermission());
     }
 
     @Test
     void shouldRequireSystemAdminForChangeUserOrganizationController() {
-        insertOrganization(1, "组织一", 1);
+        insertOrganization(1, "org-1", 1);
 
         UserOrganizationDTO dto = new UserOrganizationDTO();
         dto.setUserId("3");
@@ -225,10 +240,15 @@ class OrganizationServiceIntegrationTest {
         ApiResult<Object> successResult = permissionController.changeUserOrganization(dto);
         assertEquals(200L, successResult.getCode());
         Integer relationCount = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM user_organization WHERE user_id = 3 AND org_id = 1 AND is_group_admin = 0",
+                "SELECT COUNT(*) FROM user_organization WHERE user_id = 3 AND org_id = 1",
+                Integer.class
+        );
+        Integer taskPermission = jdbcTemplate.queryForObject(
+                "SELECT task_permission FROM mod_users WHERE user_id = 3",
                 Integer.class
         );
         assertEquals(Integer.valueOf(1), relationCount);
+        assertEquals(Integer.valueOf(0), taskPermission);
     }
 
     private void recreateTables() {
@@ -263,7 +283,6 @@ class OrganizationServiceIntegrationTest {
                 CREATE TABLE user_organization (
                     user_id INT NOT NULL,
                     org_id INT NOT NULL,
-                    is_group_admin TINYINT NOT NULL DEFAULT 0,
                     PRIMARY KEY (user_id, org_id),
                     CONSTRAINT user_organization_ibfk_1 FOREIGN KEY (user_id) REFERENCES mod_users(user_id),
                     CONSTRAINT user_organization_ibfk_2 FOREIGN KEY (org_id) REFERENCES organization(org_id)
@@ -283,10 +302,10 @@ class OrganizationServiceIntegrationTest {
     }
 
     private void insertBaseUsers() {
-        jdbcTemplate.update("INSERT INTO mod_users(user_id, username, password, permission, task_permission, phone, version) VALUES(1, 'creator', 'pwd', 0, 1, '13800000001', 0)");
-        jdbcTemplate.update("INSERT INTO mod_users(user_id, username, password, permission, task_permission, phone, version) VALUES(2, 'member', 'pwd', 0, 1, '13800000002', 0)");
-        jdbcTemplate.update("INSERT INTO mod_users(user_id, username, password, permission, task_permission, phone, version) VALUES(3, 'outsider', 'pwd', 0, 1, '13800000003', 0)");
-        jdbcTemplate.update("INSERT INTO mod_users(user_id, username, password, permission, task_permission, phone, version) VALUES(99, 'sysadmin', 'pwd', 1, 1, '13800000099', 0)");
+        jdbcTemplate.update("INSERT INTO mod_users(user_id, username, password, permission, task_permission, phone, version) VALUES(1, 'creator', 'pwd', 0, 0, '13800000001', 0)");
+        jdbcTemplate.update("INSERT INTO mod_users(user_id, username, password, permission, task_permission, phone, version) VALUES(2, 'member', 'pwd', 0, 0, '13800000002', 0)");
+        jdbcTemplate.update("INSERT INTO mod_users(user_id, username, password, permission, task_permission, phone, version) VALUES(3, 'outsider', 'pwd', 0, 0, '13800000003', 0)");
+        jdbcTemplate.update("INSERT INTO mod_users(user_id, username, password, permission, task_permission, phone, version) VALUES(99, 'sysadmin', 'pwd', 1, 0, '13800000099', 0)");
     }
 
     private void insertOrganization(int orgId, String orgName, int createUserId) {
@@ -299,12 +318,19 @@ class OrganizationServiceIntegrationTest {
         );
     }
 
-    private void insertUserOrganization(int userId, int orgId, int isGroupAdmin) {
+    private void insertUserOrganization(int userId, int orgId) {
         jdbcTemplate.update(
-                "INSERT INTO user_organization(user_id, org_id, is_group_admin) VALUES(?, ?, ?)",
+                "INSERT INTO user_organization(user_id, org_id) VALUES(?, ?)",
                 userId,
-                orgId,
-                isGroupAdmin
+                orgId
+        );
+    }
+
+    private void updateUserTaskPermission(int userId, int taskPermission) {
+        jdbcTemplate.update(
+                "UPDATE mod_users SET task_permission = ? WHERE user_id = ?",
+                taskPermission,
+                userId
         );
     }
 

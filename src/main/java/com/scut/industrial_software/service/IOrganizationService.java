@@ -59,7 +59,7 @@ public interface IOrganizationService extends IService<Organization> {
      * @param updateDTO 管理员状态
      * @return 操作结果
      */
-    ApiResult<Object> updateGroupAdminStatus(Integer orgId, Integer memberId, UpdateGroupAdminDTO updateDTO);
+    ApiResult<Object> updateMemberTaskPermission(Integer orgId, Integer memberId, UpdateGroupAdminDTO updateDTO);
 
     /**
      * 分页查询组织成员列表

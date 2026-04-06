@@ -96,13 +96,13 @@ public class OrganizationController {
      * @return 操作结果
      */
     @PutMapping("/{orgId}/members/{memberId}/group-admin")
-    public ApiResult<Object> updateGroupAdminStatus(
+    public ApiResult<Object> updateMemberTaskPermission(
             @PathVariable Integer orgId,
             @PathVariable Integer memberId,
             @Valid @RequestBody UpdateGroupAdminDTO updateDTO) {
-        log.info("修改组管理员状态，组织ID：{}，成员ID：{}，目标状态：{}", orgId, memberId, updateDTO.getIsGroupAdmin());
+        log.info("修改组管理员状态，组织ID：{}，成员ID：{}，目标状态：{}", orgId, memberId, updateDTO.getTaskPermission());
 
-        return organizationService.updateGroupAdminStatus(orgId, memberId, updateDTO);
+        return organizationService.updateMemberTaskPermission(orgId, memberId, updateDTO);
     }
 
     /**

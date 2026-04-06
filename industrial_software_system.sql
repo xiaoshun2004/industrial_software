@@ -522,7 +522,7 @@ CREATE TABLE `mod_users` (
   `permission` int NOT NULL,
   `phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL,
   `version` int DEFAULT '0',
-  `task_permission` int DEFAULT '1' COMMENT '任务权限：0-个人权限，1-组织权限',
+  `task_permission` int DEFAULT '0' COMMENT '组内权限：0-普通成员，1-组管理员',
   PRIMARY KEY (`user_id`) USING BTREE,
   UNIQUE KEY `username` (`username`) USING BTREE,
   KEY `username_2` (`username`) USING BTREE
@@ -535,7 +535,7 @@ CREATE TABLE `mod_users` (
 
 LOCK TABLES `mod_users` WRITE;
 /*!40000 ALTER TABLE `mod_users` DISABLE KEYS */;
-INSERT INTO `mod_users` VALUES (20,'张三','$2a$10$dqG1yMAPgUfuhHcmGFnw3e9EjXBaaFN6bxeIypzf9dLZTkpUBta2i',1,'13726139710',0,1),(21,'李四','$2a$10$W9cfQ2mEztnZAEh5GVRSPOBxQepOQT3/uLJnBHK4njklahrT7hjXK',0,'13324781234',0,1);
+INSERT INTO `mod_users` VALUES (20,'张三','$2a$10$dqG1yMAPgUfuhHcmGFnw3e9EjXBaaFN6bxeIypzf9dLZTkpUBta2i',1,'13726139710',0,0),(21,'李四','$2a$10$W9cfQ2mEztnZAEh5GVRSPOBxQepOQT3/uLJnBHK4njklahrT7hjXK',0,'13324781234',0,0);
 /*!40000 ALTER TABLE `mod_users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -700,7 +700,6 @@ DROP TABLE IF EXISTS `user_organization`;
 CREATE TABLE `user_organization` (
   `user_id` int NOT NULL COMMENT '用户ID',
   `org_id` int NOT NULL COMMENT '组织ID',
-  `is_group_admin` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否为组管理员：0-否，1-是',
   PRIMARY KEY (`user_id`,`org_id`) USING BTREE,
   KEY `org_id` (`org_id`) USING BTREE,
   CONSTRAINT `user_organization_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `mod_users` (`user_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
@@ -714,7 +713,7 @@ CREATE TABLE `user_organization` (
 
 LOCK TABLES `user_organization` WRITE;
 /*!40000 ALTER TABLE `user_organization` DISABLE KEYS */;
-INSERT INTO `user_organization` VALUES (1,1,1),(2,1,0),(5,1,0),(19,1,0);
+INSERT INTO `user_organization` VALUES (1,1),(2,1),(5,1),(19,1);
 /*!40000 ALTER TABLE `user_organization` ENABLE KEYS */;
 UNLOCK TABLES;
 

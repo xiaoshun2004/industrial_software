@@ -16,7 +16,7 @@ public class UserInfoVO {
     // 权限级别（0-普通用户 1-管理员）
     private Integer permission;
 
-    // 任务权限（0-个人权限 1-组织权限）
+    // 组内权限：0-普通成员，1-组管理员
     private Integer taskPermission;
     
     // 所属组织名称
