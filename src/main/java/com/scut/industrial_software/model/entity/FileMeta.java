@@ -88,4 +88,8 @@ public class FileMeta implements Serializable {
      * 文件隶属的数据库表
      */
     private String dbType;
+    private String previewImageId;
+    private String previewImagePath;
+    private String previewImageType;
+    private Long previewImageSize;
 } 

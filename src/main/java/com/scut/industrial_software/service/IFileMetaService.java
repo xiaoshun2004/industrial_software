@@ -23,7 +23,7 @@ public interface IFileMetaService extends IService<FileMeta> {
      * @param fileName 用户指定的文件名
      * @return 文件元数据
      */
-    FileMetaVO uploadFile(String dbType, String fileName, MultipartFile file);
+    FileMetaVO uploadFile(String dbType, String fileName, MultipartFile file, MultipartFile previewImage);
 
     /**
      * 流式上传文件
@@ -50,6 +50,10 @@ public interface IFileMetaService extends IService<FileMeta> {
      * @return 文件元数据
      */
     FileMetaVO getFileInfo(String field);
+
+    String getPreviewContentType(String field);
+
+    byte[] downloadPreview(String field);
 
     /**
      * 获取当前用户的文件列表√

@@ -48,9 +48,10 @@ public class FileMetaController {
     public ApiResult<FileMetaVO> uploadFile(
             @RequestParam("dbType") String dbType,
             @RequestParam("fileName") String fileName,
-            @RequestParam("file") MultipartFile file) {
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "previewImage", required = false) MultipartFile previewImage) {
         log.info("上传文件: {}, dbType: {}", file.getOriginalFilename(), dbType);
-        FileMetaVO fileMetaVO = fileMetaService.uploadFile(dbType, fileName, file);
+        FileMetaVO fileMetaVO = fileMetaService.uploadFile(dbType, fileName, file, previewImage);
         return ApiResult.success(fileMetaVO);
     }
 
@@ -159,6 +160,24 @@ public class FileMetaController {
 
         PageVO<FileMetaVO> pageResult = fileMetaService.getMyFiles(queryDTO);
         return ApiResult.success(pageResult);
+    }
+
+    @GetMapping("/preview")
+    public ResponseEntity<byte[]> previewFile(
+            @RequestParam("dbType") String dbType,
+            @RequestParam("fileId") String fileId) {
+        log.info("preview file: {}, dbType: {}", fileId, dbType);
+        byte[] previewContent = fileMetaService.downloadPreview(fileId);
+        String contentType = fileMetaService.getPreviewContentType(fileId);
+
+        MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+        if (contentType != null && !contentType.isBlank()) {
+            mediaType = MediaType.parseMediaType(contentType);
+        }
+
+        return ResponseEntity.ok()
+                .contentType(mediaType)
+                .body(previewContent);
     }
 
     /**

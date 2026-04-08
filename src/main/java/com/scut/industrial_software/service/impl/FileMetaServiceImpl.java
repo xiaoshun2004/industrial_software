@@ -36,6 +36,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -48,6 +49,13 @@ import java.util.stream.Collectors;
 @Service
 public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> implements IFileMetaService {
 
+    private static final long MAX_PREVIEW_IMAGE_SIZE = 10 * 1024 * 1024L;
+    private static final Set<String> SUPPORTED_PREVIEW_IMAGE_TYPES = Set.of(
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+    );
+
     @Value("${files.upload.path}")
     private String uploadPath;
 
@@ -57,7 +65,7 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
     @Override
     @Transactional(rollbackFor = Exception.class)
     // 上传文件（使用）
-    public FileMetaVO uploadFile(String dbType, String fileName,MultipartFile file) {
+    public FileMetaVO uploadFile(String dbType, String fileName, MultipartFile file, MultipartFile previewImage) {
         // 如果文件为空的情况
         if (file == null || file.isEmpty()) {
             throw new ApiException("文件不能为空");
@@ -68,12 +76,14 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
         }
         // 如果文件的类型不支持，返回错误
 
+        validatePreviewImage(previewImage);
+
+        String filePath = null;
+        String previewImagePath = null;
+
         try {
             // 确保上传目录存在
-            File uploadDir = new File(uploadPath);
-            if (!uploadDir.exists()) {
-                uploadDir.mkdirs();
-            }
+            ensureUploadDirectoryExists();
 
             // 获取当前登录用户
             UserDTO currentUser = UserHolder.getUser();
@@ -85,12 +95,10 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
             String fileExtension = StringUtils.getFilenameExtension(originalFilename);
             String fileUuid = UUID.randomUUID().toString().replace("-", "");
             String storedFilename = fileUuid + (fileExtension != null ? "." + fileExtension : "");
-            String filePath = uploadPath + File.separator + storedFilename;
-
-            FileMeta fileMeta;
+            filePath = uploadPath + File.separator + storedFilename;
 
             // 创建新文件记录
-            fileMeta = new FileMeta();
+            FileMeta fileMeta = new FileMeta();
             fileMeta.setFileUuid(fileUuid)
                     .setFileName(fileName + (fileExtension != null ? "." + fileExtension : ""))
                     .setFilePath(filePath)
@@ -106,19 +114,32 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
             // 保存文件到磁盘
             file.transferTo(new File(filePath));
 
+            if (hasPreviewImage(previewImage)) {
+                String previewImageId = UUID.randomUUID().toString().replace("-", "");
+                String previewExtension = StringUtils.getFilenameExtension(previewImage.getOriginalFilename());
+                String previewStoredFilename = previewImageId + (previewExtension != null ? "." + previewExtension : "");
+                previewImagePath = uploadPath + File.separator + previewStoredFilename;
+
+                previewImage.transferTo(new File(previewImagePath));
+                fileMeta.setPreviewImageId(previewImageId)
+                        .setPreviewImagePath(previewImagePath)
+                        .setPreviewImageType(previewImage.getContentType())
+                        .setPreviewImageSize(previewImage.getSize());
+            }
+
             // 保存或更新数据库记录
             saveOrUpdate(fileMeta);
 
             // 转换为VO并返回
-            FileMetaVO fileMetaVO = new FileMetaVO();
-            fileMetaVO.setId(fileMeta.getFileUuid());
-            fileMetaVO.setFileName(fileMeta.getFileName());
-            fileMetaVO.setFileSize(TransFileSizeUtil.transFileSize(fileMeta.getFileSize()));
-            fileMetaVO.setUpdateTime(fileMeta.getUpdateTime());
-            return fileMetaVO;
+            return buildFileMetaVO(fileMeta);
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error("文件上传失败", e);
+            deleteIfExists(filePath);
+            deleteIfExists(previewImagePath);
+            if (e instanceof ApiException apiException) {
+                throw apiException;
+            }
             throw new ApiException(ApiErrorCode.FILE_UPLOAD_FAILED);
         }
     }
@@ -225,16 +246,35 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
 
     @Override
     public FileMetaVO getFileInfo(String field) {
-        FileMeta fileMeta = baseMapper.selectOne(new LambdaQueryWrapper<FileMeta>().eq(FileMeta::getFileUuid, field));
-        if (fileMeta == null) {
-            throw new ApiException(ApiErrorCode.RESOURCE_NOT_FOUND);
+        return buildFileMetaVO(getFileMetaByUuid(field));
+    }
+
+    @Override
+    public String getPreviewContentType(String field) {
+        FileMeta fileMeta = getFileMetaByUuid(field);
+        if (!StringUtils.hasText(fileMeta.getPreviewImagePath())) {
+            throw new ApiException("预览图未找到");
         }
-        FileMetaVO fileMetaVO = new FileMetaVO();
-        fileMetaVO.setFileName(fileMeta.getFileName());
-        fileMetaVO.setId(fileMeta.getFileUuid());
-        fileMetaVO.setFileSize(TransFileSizeUtil.transFileSize(fileMeta.getFileSize()));
-        fileMetaVO.setUpdateTime(fileMeta.getUpdateTime());
-        return fileMetaVO;
+        return fileMeta.getPreviewImageType();
+    }
+
+    @Override
+    public byte[] downloadPreview(String field) {
+        FileMeta fileMeta = getFileMetaByUuid(field);
+        if (!StringUtils.hasText(fileMeta.getPreviewImagePath())) {
+            throw new ApiException("预览图未找到");
+        }
+
+        try {
+            Path path = Paths.get(fileMeta.getPreviewImagePath());
+            if (!Files.exists(path)) {
+                throw new ApiException("预览图未找到");
+            }
+            return Files.readAllBytes(path);
+        } catch (IOException e) {
+            log.error("预览图下载失败", e);
+            throw new ApiException(ApiErrorCode.FILE_DOWNLOAD_FAILED);
+        }
     }
 
     @Override
@@ -260,14 +300,7 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
 
         // 转换为VO
         List<FileMetaVO> records = filePage.getRecords().stream()
-                .map(fileMeta -> {
-                    FileMetaVO vo = new FileMetaVO();
-                    vo.setId(fileMeta.getFileUuid());
-                    vo.setFileName(fileMeta.getFileName());
-                    vo.setFileSize(TransFileSizeUtil.transFileSize(fileMeta.getFileSize()));
-                    vo.setUpdateTime(fileMeta.getUpdateTime());
-                    return vo;
-                })
+                .map(this::buildFileMetaVO)
                 .collect(Collectors.toList());
 
         // 构建分页结果
@@ -299,10 +332,7 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteFile(String id) {
-        FileMeta fileMeta = baseMapper.selectOne(new LambdaQueryWrapper<FileMeta>().eq(FileMeta::getFileUuid, id));
-        if (fileMeta == null) {
-            throw new ApiException(ApiErrorCode.RESOURCE_NOT_FOUND);
-        }
+        FileMeta fileMeta = getFileMetaByUuid(id);
 
         // 获取当前登录用户
         UserDTO currentUser = UserHolder.getUser();
@@ -327,7 +357,70 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
         }
 
         // 删除数据库记录
+        if (StringUtils.hasText(fileMeta.getPreviewImagePath())) {
+            File previewFile = new File(fileMeta.getPreviewImagePath());
+            if (previewFile.exists()) {
+                boolean deleted = previewFile.delete();
+                if(!deleted){
+                    throw new ApiException("预览图删除失败");
+                }
+            }
+        }
+
         return true;
+    }
+
+    private FileMeta getFileMetaByUuid(String field) {
+        FileMeta fileMeta = baseMapper.selectOne(new LambdaQueryWrapper<FileMeta>().eq(FileMeta::getFileUuid, field));
+        if (fileMeta == null) {
+            throw new ApiException(ApiErrorCode.RESOURCE_NOT_FOUND);
+        }
+        return fileMeta;
+    }
+
+    private FileMetaVO buildFileMetaVO(FileMeta fileMeta) {
+        FileMetaVO fileMetaVO = new FileMetaVO();
+        fileMetaVO.setFileName(fileMeta.getFileName());
+        fileMetaVO.setId(fileMeta.getFileUuid());
+        fileMetaVO.setFileSize(TransFileSizeUtil.transFileSize(fileMeta.getFileSize()));
+        fileMetaVO.setUpdateTime(fileMeta.getUpdateTime());
+        fileMetaVO.setHasPreview(StringUtils.hasText(fileMeta.getPreviewImagePath()));
+        fileMetaVO.setPreviewImageId(fileMeta.getPreviewImageId());
+        return fileMetaVO;
+    }
+
+    private boolean hasPreviewImage(MultipartFile previewImage) {
+        return previewImage != null && !previewImage.isEmpty();
+    }
+
+    private void validatePreviewImage(MultipartFile previewImage) {
+        if (!hasPreviewImage(previewImage)) {
+            return;
+        }
+        if (!SUPPORTED_PREVIEW_IMAGE_TYPES.contains(previewImage.getContentType())) {
+            throw new ApiException("预览图格式不支持");
+        }
+        if (previewImage.getSize() > MAX_PREVIEW_IMAGE_SIZE) {
+            throw new ApiException("预览图过大");
+        }
+    }
+
+    private void ensureUploadDirectoryExists() throws IOException {
+        Path uploadDir = Paths.get(uploadPath);
+        if (!Files.exists(uploadDir)) {
+            Files.createDirectories(uploadDir);
+        }
+    }
+
+    private void deleteIfExists(String path) {
+        if (!StringUtils.hasText(path)) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(Paths.get(path));
+        } catch (IOException e) {
+            log.warn("文件删除失败: {}", path, e);
+        }
     }
 
     @Override
