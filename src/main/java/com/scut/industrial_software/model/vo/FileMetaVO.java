@@ -33,4 +33,6 @@ public class FileMetaVO {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
+    private Boolean hasPreview;
+    private String previewImageId;
 } 

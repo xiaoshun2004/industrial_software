@@ -17,6 +17,10 @@
         <result column="create_time" property="createTime" />
         <result column="update_time" property="updateTime" />
         <result column="db_type" property="dbType" />
+        <result column="preview_image_id" property="previewImageId" />
+        <result column="preview_image_path" property="previewImagePath" />
+        <result column="preview_image_type" property="previewImageType" />
+        <result column="preview_image_size" property="previewImageSize" />
     </resultMap>
 
     <!-- 根据创建者ID分页查询文件列表 -->
