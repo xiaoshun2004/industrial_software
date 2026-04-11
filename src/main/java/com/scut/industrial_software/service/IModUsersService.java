@@ -100,15 +100,15 @@ public interface IModUsersService extends IService<ModUsers> {
      * 管理员修改用户所属组织
      * 功能说明：
      * 1. 修改用户的组织关联关系
-     * 2. 自动同步更新该用户创建的所有项目的所属组织，保证数据一致性
+     * 2. 用户创建的项目组织归属保持不变
      * 
      * @param userOrganizationDTO 用户组织修改DTO
-     * @return 操作结果，包含新组织名称和同步更新的项目数量
+     * @return 操作结果，包含新组织名称和项目归属变更数量
      */
     ApiResult<Object> changeUserOrganization(UserOrganizationDTO userOrganizationDTO);
 
     /**
-     * 更新用户组织关联，并同步更新其创建项目的组织归属
+     * 更新用户组织关联，用户创建的项目组织归属保持不变
      * @param userId 用户ID
      * @param orgId 目标组织ID，null表示移出组织
      * @param taskPermission 组内权限，null表示沿用现有值或默认值

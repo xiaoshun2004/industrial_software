@@ -4,12 +4,13 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.scut.industrial_software.common.api.ApiResult;
+import com.scut.industrial_software.mapper.FileMetaMapper;
 import com.scut.industrial_software.mapper.ModTasksMapper;
 import com.scut.industrial_software.mapper.ModUsersMapper;
-import com.scut.industrial_software.mapper.OrganizationMapper;
 import com.scut.industrial_software.mapper.UserOrganizationMapper;
 import com.scut.industrial_software.model.dto.PageRequestDTO;
 import com.scut.industrial_software.model.dto.UserDTO;
+import com.scut.industrial_software.model.entity.FileMeta;
 import com.scut.industrial_software.model.entity.UserOrganization;
 import com.scut.industrial_software.utils.UserHolder;
 import com.scut.industrial_software.model.dto.ProjectCreateDTO;
@@ -17,8 +18,8 @@ import com.scut.industrial_software.model.entity.ModProjects;
 import com.scut.industrial_software.mapper.ModProjectsMapper;
 import com.scut.industrial_software.model.entity.ModTasks;
 import com.scut.industrial_software.model.entity.ModUsers;
-import com.scut.industrial_software.model.entity.Organization;
 import com.scut.industrial_software.service.IModProjectsService;
+import com.scut.industrial_software.service.IPermissionService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -47,10 +48,13 @@ public class ModProjectsServiceImpl extends ServiceImpl<ModProjectsMapper, ModPr
     private ModUsersMapper modUsersMapper;
 
     @Autowired
-    private OrganizationMapper organizationMapper;
+    private FileMetaMapper fileMetaMapper;
     
     @Autowired
     private UserOrganizationMapper userOrganizationMapper;
+
+    @Autowired
+    private IPermissionService permissionService;
 
     @Override
     public ApiResult<?> getSharedProjectsPage(PageRequestDTO requestDTO) {
@@ -86,14 +90,27 @@ public class ModProjectsServiceImpl extends ServiceImpl<ModProjectsMapper, ModPr
     public ApiResult<?> getPrivateProjectsPage(PageRequestDTO requestDTO, Integer userId) {
         Page<Map<String, Object>> page = new Page<>(requestDTO.getPageNum(), requestDTO.getPageSize());
         IPage<Map<String, Object>> pageResult = baseMapper.selectPrivateProjectsByPage(page, requestDTO.getKeyword(), userId);
-        
-        Map<String, Object> result = new HashMap<>();
-        result.put("records", pageResult.getRecords());
-        result.put("total", pageResult.getTotal());
-        result.put("size", pageResult.getSize());
-        result.put("current", pageResult.getCurrent());
-        
-        return ApiResult.success(result);
+
+        return ApiResult.success(buildPageResult(pageResult));
+    }
+
+    @Override
+    public ApiResult<?> getAccessibleProjectsPage(PageRequestDTO requestDTO) {
+        UserDTO currentUser = UserHolder.getUser();
+        if (currentUser == null || currentUser.getId() == null) {
+            return ApiResult.failed("用户未登录");
+        }
+
+        Integer userOrgId = getCurrentUserOrganizationId(currentUser.getId().intValue());
+        Page<Map<String, Object>> page = new Page<>(requestDTO.getPageNum(), requestDTO.getPageSize());
+        IPage<Map<String, Object>> pageResult = baseMapper.selectAccessibleProjectsByPage(
+                page,
+                requestDTO.getKeyword(),
+                userOrgId,
+                currentUser.getId().intValue()
+        );
+
+        return ApiResult.success(buildPageResult(pageResult));
     }
 
     @Override
@@ -101,31 +118,26 @@ public class ModProjectsServiceImpl extends ServiceImpl<ModProjectsMapper, ModPr
         if (!StringUtils.hasText(createDTO.getProjectName())) {
             return ApiResult.failed("项目名称不能为空");
         }
-        
-        // 根据creator名字查找用户ID
-        LambdaQueryWrapper<ModUsers> userWrapper = new LambdaQueryWrapper<>();
-        userWrapper.eq(ModUsers::getUsername, createDTO.getCreator());
-        ModUsers user = modUsersMapper.selectOne(userWrapper);
+
+        UserDTO currentUser = UserHolder.getUser();
+        if (currentUser == null || currentUser.getId() == null) {
+            return ApiResult.failed("用户未登录");
+        }
+
+        ModUsers user = modUsersMapper.selectById(currentUser.getId().intValue());
         if (user == null) {
             return ApiResult.failed("创建者用户不存在");
         }
-        
-        // 根据organization名字查找组织ID
-        Integer organizationId = null;
-        if (createDTO.getOrganization() != null && !createDTO.getOrganization().equals("无")) {
-            LambdaQueryWrapper<Organization> orgWrapper = new LambdaQueryWrapper<>();
-            orgWrapper.eq(Organization::getOrgName, createDTO.getOrganization());
-            Organization organization = organizationMapper.selectOne(orgWrapper);
-            if (organization == null) {
-                return ApiResult.failed("组织不存在");
-            }
-            organizationId = organization.getOrgId();
+
+        Integer organizationId = getCurrentUserOrganizationId(currentUser.getId().intValue());
+        if (organizationId == null) {
+            return ApiResult.failed("用户未加入组织，无法创建共享项目");
         }
         
         ModProjects project = new ModProjects();
         project.setProjectName(createDTO.getProjectName());
         project.setCreator(user.getUserId());
-        project.setOrganizationId(organizationId); // 可以为null
+        project.setOrganizationId(organizationId);
         project.setCreationTime(LocalDateTime.now());
         project.setProjectStatus(0); // 0表示共享项目
         
@@ -142,31 +154,21 @@ public class ModProjectsServiceImpl extends ServiceImpl<ModProjectsMapper, ModPr
         if (!StringUtils.hasText(createDTO.getProjectName())) {
             return ApiResult.failed("项目名称不能为空");
         }
-        
-        // 根据creator名字查找用户ID
-        LambdaQueryWrapper<ModUsers> userWrapper = new LambdaQueryWrapper<>();
-        userWrapper.eq(ModUsers::getUsername, createDTO.getCreator());
-        ModUsers user = modUsersMapper.selectOne(userWrapper);
+
+        UserDTO currentUser = UserHolder.getUser();
+        if (currentUser == null || currentUser.getId() == null) {
+            return ApiResult.failed("用户未登录");
+        }
+
+        ModUsers user = modUsersMapper.selectById(currentUser.getId().intValue());
         if (user == null) {
             return ApiResult.failed("创建者用户不存在");
-        }
-        
-        // 根据organization名字查找组织ID
-        Integer organizationId = null;
-        if (createDTO.getOrganization() != null && !createDTO.getOrganization().equals("无")) {
-            LambdaQueryWrapper<Organization> orgWrapper = new LambdaQueryWrapper<>();
-            orgWrapper.eq(Organization::getOrgName, createDTO.getOrganization());
-            Organization organization = organizationMapper.selectOne(orgWrapper);
-            if (organization == null) {
-                return ApiResult.failed("组织不存在");
-            }
-            organizationId = organization.getOrgId();
         }
         
         ModProjects project = new ModProjects();
         project.setProjectName(createDTO.getProjectName());
         project.setCreator(user.getUserId());
-        project.setOrganizationId(organizationId); // 可以为null
+        project.setOrganizationId(null);
         project.setCreationTime(LocalDateTime.now());
         project.setProjectStatus(1); // 1表示私人项目
         
@@ -180,12 +182,14 @@ public class ModProjectsServiceImpl extends ServiceImpl<ModProjectsMapper, ModPr
 
     @Override
     public ApiResult<?> encryptProject(Integer projectId) {
-        ModProjects project = this.getById(projectId);
-        if (project == null) {
-            return ApiResult.failed("项目不存在");
+        ApiResult<ModProjects> accessResult = validateProjectManageAccess(projectId);
+        if (accessResult.getCode() != 200L) {
+            return accessResult;
         }
+        ModProjects project = accessResult.getData();
         
         project.setProjectStatus(1); // 1表示私人项目
+        project.setOrganizationId(null);
         boolean result = this.updateById(project);
         if (result) {
             return ApiResult.success(null, "项目已加密");
@@ -196,12 +200,21 @@ public class ModProjectsServiceImpl extends ServiceImpl<ModProjectsMapper, ModPr
 
     @Override
     public ApiResult<?> decryptProject(Integer projectId) {
-        ModProjects project = this.getById(projectId);
-        if (project == null) {
-            return ApiResult.failed("项目不存在");
+        ApiResult<ModProjects> accessResult = validateProjectManageAccess(projectId);
+        if (accessResult.getCode() != 200L) {
+            return accessResult;
+        }
+        ModProjects project = accessResult.getData();
+
+        UserDTO currentUser = UserHolder.getUser();
+
+        Integer organizationId = getCurrentUserOrganizationId(currentUser.getId().intValue());
+        if (organizationId == null) {
+            return ApiResult.failed("用户未加入组织，无法设为共享项目");
         }
         
         project.setProjectStatus(0); // 0表示共享项目
+        project.setOrganizationId(organizationId);
         boolean result = this.updateById(project);
         if (result) {
             return ApiResult.success(null, "已取消加密");
@@ -213,9 +226,16 @@ public class ModProjectsServiceImpl extends ServiceImpl<ModProjectsMapper, ModPr
     @Override
     @Transactional
     public ApiResult<?> deleteProject(Integer projectId) {
-        ModProjects project = this.getById(projectId);
-        if (project == null) {
-            return ApiResult.failed("项目不存在");
+        ApiResult<ModProjects> accessResult = validateProjectManageAccess(projectId);
+        if (accessResult.getCode() != 200L) {
+            return accessResult;
+        }
+        ModProjects project = accessResult.getData();
+
+        LambdaQueryWrapper<FileMeta> fileWrapper = new LambdaQueryWrapper<>();
+        fileWrapper.eq(FileMeta::getProjectId, projectId);
+        if (fileMetaMapper.selectCount(fileWrapper) > 0) {
+            return ApiResult.failed("项目下存在文件，请先删除文件");
         }
         
         // 先删除项目下的所有任务
@@ -230,5 +250,50 @@ public class ModProjectsServiceImpl extends ServiceImpl<ModProjectsMapper, ModPr
         } else {
             return ApiResult.failed("删除失败");
         }
+    }
+
+    private Integer getCurrentUserOrganizationId(Integer userId) {
+        LambdaQueryWrapper<UserOrganization> userOrgWrapper = new LambdaQueryWrapper<>();
+        userOrgWrapper.eq(UserOrganization::getUserId, userId);
+        UserOrganization userOrganization = userOrganizationMapper.selectOne(userOrgWrapper);
+        return userOrganization == null ? null : userOrganization.getOrgId();
+    }
+
+    private ApiResult<ModProjects> validateProjectManageAccess(Integer projectId) {
+        ModProjects project = this.getById(projectId);
+        if (project == null) {
+            return ApiResult.failed("项目不存在");
+        }
+
+        UserDTO currentUser = UserHolder.getUser();
+        if (currentUser == null || currentUser.getId() == null) {
+            return ApiResult.failed("用户未登录");
+        }
+
+        if (Integer.valueOf(1).equals(project.getProjectStatus())) {
+            if (!currentUser.getId().equals(project.getCreator())) {
+                return ApiResult.failed("权限不足");
+            }
+            return ApiResult.success(project);
+        }
+
+        if (Integer.valueOf(0).equals(project.getProjectStatus())) {
+            Integer organizationId = project.getOrganizationId();
+            if (organizationId == null || !permissionService.canManageOrganization(organizationId)) {
+                return ApiResult.failed("权限不足");
+            }
+            return ApiResult.success(project);
+        }
+
+        return ApiResult.failed("项目状态异常");
+    }
+
+    private Map<String, Object> buildPageResult(IPage<Map<String, Object>> pageResult) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("records", pageResult.getRecords());
+        result.put("total", pageResult.getTotal());
+        result.put("size", pageResult.getSize());
+        result.put("current", pageResult.getCurrent());
+        return result;
     }
 }

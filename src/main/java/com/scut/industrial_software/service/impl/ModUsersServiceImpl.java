@@ -7,12 +7,10 @@ import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.common.exception.ApiAsserts;
 import com.scut.industrial_software.model.constant.RedisConstants;
 import com.scut.industrial_software.model.dto.*;
-import com.scut.industrial_software.model.entity.ModProjects;
 import com.scut.industrial_software.model.entity.ModUsers;
 import com.scut.industrial_software.model.entity.Organization;
 import com.scut.industrial_software.model.entity.UserOrganization;
 import com.scut.industrial_software.mapper.ModUsersMapper;
-import com.scut.industrial_software.mapper.ModProjectsMapper;
 import com.scut.industrial_software.mapper.OrganizationMapper;
 import com.scut.industrial_software.mapper.UserOrganizationMapper;
 import com.scut.industrial_software.model.vo.PageVO;
@@ -53,9 +51,6 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
     @Autowired
     private TokenBlacklistService tokenBlacklistService;
 
-    @Autowired
-    private ModProjectsMapper modProjectsMapper;
-    
     @Autowired
     private OrganizationMapper organizationMapper;
     
@@ -568,27 +563,15 @@ public class ModUsersServiceImpl extends ServiceImpl<ModUsersMapper, ModUsers> i
     }
 
     private int syncUserProjectsOrganization(Integer userId, Integer orgId) {
-        LambdaQueryWrapper<ModProjects> projectWrapper = new LambdaQueryWrapper<>();
-        projectWrapper.eq(ModProjects::getCreator, userId);
-        List<ModProjects> userProjects = modProjectsMapper.selectList(projectWrapper);
-
-        if (!userProjects.isEmpty()) {
-            for (ModProjects project : userProjects) {
-                project.setOrganizationId(orgId);
-                modProjectsMapper.updateById(project);
-            }
-
-            log.info("已同步更新用户 {} 创建的 {} 个项目的所属组织为: {}", userId, userProjects.size(), getOrganizationName(orgId));
-        }
-
-        return userProjects.size();
+        log.info("用户 {} 的组织已变更为 {}，项目组织归属保持不变", userId, getOrganizationName(orgId));
+        return 0;
     }
 
     private ApiResult<Object> buildUserOrganizationChangeResult(String organizationName, int updatedProjectsCount) {
         Map<String, Object> resultData = new HashMap<>();
         resultData.put("newOrganization", organizationName);
         resultData.put("updatedProjectsCount", updatedProjectsCount);
-        return ApiResult.success(resultData, "用户组织修改成功，已同步更新相关项目");
+        return ApiResult.success(resultData, "用户组织修改成功，项目归属保持不变");
     }
 
     private String getOrganizationName(Integer orgId) {

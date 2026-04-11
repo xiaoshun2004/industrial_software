@@ -17,6 +17,7 @@
         <result column="create_time" property="createTime" />
         <result column="update_time" property="updateTime" />
         <result column="db_type" property="dbType" />
+        <result column="project_id" property="projectId" />
         <result column="preview_image_id" property="previewImageId" />
         <result column="preview_image_path" property="previewImagePath" />
         <result column="preview_image_type" property="previewImageType" />
@@ -35,6 +36,19 @@
         SELECT * FROM file_meta
         WHERE creator_id = #{creatorId}
         AND db_type = #{dbType}
+        <if test="keyword != null and keyword != ''">
+            AND file_name LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 根据项目ID和文件隶属数据库类型分页查询文件列表 -->
+    <select id="selectPageByProjectIdAndDbType" resultMap="BaseResultMap">
+        SELECT * FROM file_meta
+        WHERE project_id = #{projectId}
+        <if test="dbType != null and dbType != ''">
+            AND db_type = #{dbType}
+        </if>
         <if test="keyword != null and keyword != ''">
             AND file_name LIKE CONCAT('%', #{keyword}, '%')
         </if>

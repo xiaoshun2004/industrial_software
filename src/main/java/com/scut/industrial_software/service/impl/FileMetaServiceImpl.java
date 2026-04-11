@@ -9,10 +9,15 @@ import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.common.constant.Constant;
 import com.scut.industrial_software.common.exception.ApiException;
 import com.scut.industrial_software.mapper.FileMetaMapper;
+import com.scut.industrial_software.mapper.ModProjectsMapper;
+import com.scut.industrial_software.mapper.UserOrganizationMapper;
 import com.scut.industrial_software.model.constant.RedisConstants;
+import com.scut.industrial_software.model.dto.FileMetaUpdateDTO;
 import com.scut.industrial_software.model.dto.FileQueryDTO;
 import com.scut.industrial_software.model.dto.UserDTO;
 import com.scut.industrial_software.model.entity.FileMeta;
+import com.scut.industrial_software.model.entity.ModProjects;
+import com.scut.industrial_software.model.entity.UserOrganization;
 import com.scut.industrial_software.model.vo.FileMetaVO;
 import com.scut.industrial_software.model.vo.PageVO;
 import com.scut.industrial_software.service.IFileMetaService;
@@ -62,10 +67,16 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
+    @Resource
+    private ModProjectsMapper modProjectsMapper;
+
+    @Resource
+    private UserOrganizationMapper userOrganizationMapper;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     // 上传文件（使用）
-    public FileMetaVO uploadFile(String dbType, String fileName, MultipartFile file, MultipartFile previewImage) {
+    public FileMetaVO uploadFile(String dbType, String fileName, Integer projectId, MultipartFile file, MultipartFile previewImage) {
         // 如果文件为空的情况
         if (file == null || file.isEmpty()) {
             throw new ApiException("文件不能为空");
@@ -77,6 +88,7 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
         // 如果文件的类型不支持，返回错误
 
         validatePreviewImage(previewImage);
+        ModProjects project = validateProjectAccess(projectId);
 
         String filePath = null;
         String previewImagePath = null;
@@ -86,16 +98,16 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
             ensureUploadDirectoryExists();
 
             // 获取当前登录用户
-            UserDTO currentUser = UserHolder.getUser();
-            Integer userId = currentUser != null ? currentUser.getId() : null;
-            String username = currentUser != null ? currentUser.getName() : "unknown";
+            UserDTO currentUser = requireCurrentUser();
+            Integer userId = currentUser.getId();
+            String username = currentUser.getName();
 
             // 生成文件UUID和保存路径
             String originalFilename = file.getOriginalFilename();
             String fileExtension = StringUtils.getFilenameExtension(originalFilename);
             String fileUuid = UUID.randomUUID().toString().replace("-", "");
             String storedFilename = fileUuid + (fileExtension != null ? "." + fileExtension : "");
-            filePath = uploadPath + File.separator + storedFilename;
+            filePath = resolveStoredPath(storedFilename);
 
             // 创建新文件记录
             FileMeta fileMeta = new FileMeta();
@@ -109,7 +121,8 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
                     .setStorageLocation("LOCAL_DISK")
                     .setCreateTime(LocalDateTime.now())
                     .setUpdateTime(LocalDateTime.now())
-                    .setDbType(dbType);
+                    .setDbType(dbType)
+                    .setProjectId(project.getProjectId());
 
             // 保存文件到磁盘
             file.transferTo(new File(filePath));
@@ -118,7 +131,7 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
                 String previewImageId = UUID.randomUUID().toString().replace("-", "");
                 String previewExtension = StringUtils.getFilenameExtension(previewImage.getOriginalFilename());
                 String previewStoredFilename = previewImageId + (previewExtension != null ? "." + previewExtension : "");
-                previewImagePath = uploadPath + File.separator + previewStoredFilename;
+                previewImagePath = resolveStoredPath(previewStoredFilename);
 
                 previewImage.transferTo(new File(previewImagePath));
                 fileMeta.setPreviewImageId(previewImageId)
@@ -146,7 +159,7 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public FileMetaVO uploadFileStream(String dbType, String fileName, MultipartFile file) {
+    public FileMetaVO uploadFileStream(String dbType, String fileName, Integer projectId, MultipartFile file) {
         // 如果文件为空的情况
         if (file == null || file.getSize() == 0) {
             throw new ApiException("文件不能为空");
@@ -156,29 +169,27 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
         if (Constant.dbTypes.stream().noneMatch(dbType::equals)) {
             throw new ApiException(ApiErrorCode.INVALID_DATABASE_TYPE);
         }
+        ModProjects project = validateProjectAccess(projectId);
 
         // 如果文件的类型不支持，返回错误
         // 这里可以添加文件类型验证逻辑
 
         try {
             // 确保上传目录存在
-            File uploadDir = new File(uploadPath);
-            if (!uploadDir.exists()) {
-                uploadDir.mkdirs();
-            }
+            ensureUploadDirectoryExists();
 
 
             // 获取当前登录用户
-            UserDTO currentUser = UserHolder.getUser();
-            Integer userId = currentUser != null ? currentUser.getId() : null;
-            String username = currentUser != null ? currentUser.getName() : "unknown";
+            UserDTO currentUser = requireCurrentUser();
+            Integer userId = currentUser.getId();
+            String username = currentUser.getName();
 
             // 生成文件UUID和保存路径
             String originalFilename = file.getOriginalFilename();
             String fileExtension = StringUtils.getFilenameExtension(originalFilename);
             String fileUuid = UUID.randomUUID().toString().replace("-", "");
             String storedFilename = fileUuid + (fileExtension != null ? "." + fileExtension : "");
-            String filePath = uploadPath + File.separator + storedFilename;
+            String filePath = resolveStoredPath(storedFilename);
 
             FileMeta fileMeta;
 
@@ -194,7 +205,8 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
                     .setStorageLocation("LOCAL_DISK")
                     .setCreateTime(LocalDateTime.now())
                     .setUpdateTime(LocalDateTime.now())
-                    .setDbType(dbType);
+                    .setDbType(dbType)
+                    .setProjectId(project.getProjectId());
 
             // 流式保存文件到磁盘
             InputStream inputStream = file.getInputStream();
@@ -218,6 +230,7 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
                 fileMetaVO.setId(fileMeta.getFileUuid());
                 fileMetaVO.setFileName(fileMeta.getFileName());
                 fileMetaVO.setFileSize(TransFileSizeUtil.transFileSize(fileMeta.getFileSize()));
+                fileMetaVO.setProjectId(fileMeta.getProjectId());
                 fileMetaVO.setUpdateTime(fileMeta.getUpdateTime());
                 return fileMetaVO;
         } catch (IOException e) {
@@ -229,11 +242,10 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
 
     @Override
     //下载文件（使用）
-    public byte[] downloadFile(String field) {
-        FileMeta fileMeta = baseMapper.selectOne(new LambdaQueryWrapper<FileMeta>().eq(FileMeta::getFileUuid, field));
-        if (fileMeta == null) {
-            throw new ApiException(ApiErrorCode.RESOURCE_NOT_FOUND);
-        }
+    public byte[] downloadFile(String field, Integer projectId) {
+        FileMeta fileMeta = getFileMetaByUuid(field);
+        validateFileProject(fileMeta, projectId);
+        validateProjectAccess(projectId);
 
         try {
             Path path = Paths.get(fileMeta.getFilePath());
@@ -245,13 +257,18 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
     }
 
     @Override
-    public FileMetaVO getFileInfo(String field) {
-        return buildFileMetaVO(getFileMetaByUuid(field));
+    public FileMetaVO getFileInfo(String field, Integer projectId) {
+        FileMeta fileMeta = getFileMetaByUuid(field);
+        validateFileProject(fileMeta, projectId);
+        validateProjectAccess(projectId);
+        return buildFileMetaVO(fileMeta);
     }
 
     @Override
-    public String getPreviewContentType(String field) {
+    public String getPreviewContentType(String field, Integer projectId) {
         FileMeta fileMeta = getFileMetaByUuid(field);
+        validateFileProject(fileMeta, projectId);
+        validateProjectAccess(projectId);
         if (!StringUtils.hasText(fileMeta.getPreviewImagePath())) {
             throw new ApiException("预览图未找到");
         }
@@ -259,8 +276,10 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
     }
 
     @Override
-    public byte[] downloadPreview(String field) {
+    public byte[] downloadPreview(String field, Integer projectId) {
         FileMeta fileMeta = getFileMetaByUuid(field);
+        validateFileProject(fileMeta, projectId);
+        validateProjectAccess(projectId);
         if (!StringUtils.hasText(fileMeta.getPreviewImagePath())) {
             throw new ApiException("预览图未找到");
         }
@@ -286,17 +305,19 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
             throw new ApiException(ApiErrorCode.UNAUTHORIZED);
         }
 
-        // 检查dbType参数是否有效
-        if(Constant.dbTypes.stream().noneMatch(queryDTO.getDbType()::equals)){
+        // dbType 可选：传了才做校验和过滤
+        if (StringUtils.hasText(queryDTO.getDbType())
+                && Constant.dbTypes.stream().noneMatch(queryDTO.getDbType()::equals)) {
             throw new ApiException(ApiErrorCode.INVALID_DATABASE_TYPE);
         }
+        validateProjectAccess(queryDTO.getProjectId());
 
         // 构建分页参数
         Page<FileMeta> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
         String keyword = StringUtils.hasText(queryDTO.getKeyword()) ? queryDTO.getKeyword().trim() : null;
 
-        // 查询当前用户的文件
-        IPage<FileMeta> filePage = baseMapper.selectPageByCreatorIdAndDbType(page, currentUser.getId(), queryDTO.getDbType(), keyword);
+        // 查询当前项目下的文件
+        IPage<FileMeta> filePage = baseMapper.selectPageByProjectIdAndDbType(page, queryDTO.getProjectId(), queryDTO.getDbType(), keyword);
 
         // 转换为VO
         List<FileMetaVO> records = filePage.getRecords().stream()
@@ -331,14 +352,10 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
     */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean deleteFile(String id) {
+    public boolean deleteFile(String id, Integer projectId) {
         FileMeta fileMeta = getFileMetaByUuid(id);
-
-        // 获取当前登录用户
-        UserDTO currentUser = UserHolder.getUser();
-        if (currentUser != null && !currentUser.getId().equals(fileMeta.getCreatorId())) {
-            throw new ApiException(ApiErrorCode.FORBIDDEN);
-        }
+        validateFileProject(fileMeta, projectId);
+        validateProjectAccess(projectId);
 
         //根据fileMeta实例，删除数据库记录
         boolean IsRemove = removeById(fileMeta.getId());
@@ -370,6 +387,32 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
         return true;
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public FileMetaVO updateFileMeta(String id, Integer projectId, FileMetaUpdateDTO updateDTO) {
+        if (updateDTO == null) {
+            throw new ApiException(ApiErrorCode.VALIDATE_FAILED);
+        }
+
+        FileMeta fileMeta = getFileMetaByUuid(id);
+        validateFileProject(fileMeta, projectId);
+        validateProjectAccess(projectId);
+
+        if (StringUtils.hasText(updateDTO.getFileName())) {
+            fileMeta.setFileName(updateDTO.getFileName().trim());
+        }
+        if (updateDTO.getDescription() != null) {
+            fileMeta.setDescription(updateDTO.getDescription());
+        }
+        fileMeta.setUpdateTime(LocalDateTime.now());
+
+        boolean updated = updateById(fileMeta);
+        if (!updated) {
+            throw new ApiException("文件元数据更新失败");
+        }
+        return buildFileMetaVO(fileMeta);
+    }
+
     private FileMeta getFileMetaByUuid(String field) {
         FileMeta fileMeta = baseMapper.selectOne(new LambdaQueryWrapper<FileMeta>().eq(FileMeta::getFileUuid, field));
         if (fileMeta == null) {
@@ -383,10 +426,65 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
         fileMetaVO.setFileName(fileMeta.getFileName());
         fileMetaVO.setId(fileMeta.getFileUuid());
         fileMetaVO.setFileSize(TransFileSizeUtil.transFileSize(fileMeta.getFileSize()));
+        fileMetaVO.setDescription(fileMeta.getDescription());
+        fileMetaVO.setProjectId(fileMeta.getProjectId());
         fileMetaVO.setUpdateTime(fileMeta.getUpdateTime());
         fileMetaVO.setHasPreview(StringUtils.hasText(fileMeta.getPreviewImagePath()));
         fileMetaVO.setPreviewImageId(fileMeta.getPreviewImageId());
         return fileMetaVO;
+    }
+
+    private UserDTO requireCurrentUser() {
+        UserDTO currentUser = UserHolder.getUser();
+        if (currentUser == null || currentUser.getId() == null) {
+            throw new ApiException(ApiErrorCode.UNAUTHORIZED);
+        }
+        return currentUser;
+    }
+
+    private ModProjects validateProjectAccess(Integer projectId) {
+        if (projectId == null) {
+            throw new ApiException("项目ID不能为空");
+        }
+
+        UserDTO currentUser = requireCurrentUser();
+        ModProjects project = modProjectsMapper.selectById(projectId);
+        if (project == null) {
+            throw new ApiException(ApiErrorCode.PROJECT_NOT_FOUND);
+        }
+
+        if (Integer.valueOf(1).equals(project.getProjectStatus())) {
+            if (!currentUser.getId().equals(project.getCreator())) {
+                throw new ApiException(ApiErrorCode.FORBIDDEN);
+            }
+            return project;
+        }
+
+        if (Integer.valueOf(0).equals(project.getProjectStatus())) {
+            Integer userOrgId = getCurrentUserOrganizationId(currentUser.getId());
+            if (project.getOrganizationId() == null || !project.getOrganizationId().equals(userOrgId)) {
+                throw new ApiException(ApiErrorCode.FORBIDDEN);
+            }
+            return project;
+        }
+
+        throw new ApiException(ApiErrorCode.FORBIDDEN);
+    }
+
+    private Integer getCurrentUserOrganizationId(Integer userId) {
+        LambdaQueryWrapper<UserOrganization> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserOrganization::getUserId, userId);
+        UserOrganization userOrganization = userOrganizationMapper.selectOne(wrapper);
+        return userOrganization == null ? null : userOrganization.getOrgId();
+    }
+
+    private void validateFileProject(FileMeta fileMeta, Integer projectId) {
+        if (projectId == null) {
+            throw new ApiException("项目ID不能为空");
+        }
+        if (fileMeta.getProjectId() == null || !projectId.equals(fileMeta.getProjectId())) {
+            throw new ApiException("文件不属于该项目");
+        }
     }
 
     private boolean hasPreviewImage(MultipartFile previewImage) {
@@ -410,6 +508,10 @@ public class FileMetaServiceImpl extends ServiceImpl<FileMetaMapper, FileMeta> i
         if (!Files.exists(uploadDir)) {
             Files.createDirectories(uploadDir);
         }
+    }
+
+    private String resolveStoredPath(String filename) {
+        return Paths.get(uploadPath, filename).normalize().toString();
     }
 
     private void deleteIfExists(String path) {

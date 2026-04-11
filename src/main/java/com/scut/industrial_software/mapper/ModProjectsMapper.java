@@ -37,4 +37,18 @@ public interface ModProjectsMapper extends BaseMapper<ModProjects> {
      * @return 分页结果
      */
     IPage<Map<String, Object>> selectPrivateProjectsByPage(Page<Map<String, Object>> page, @Param("keyword") String keyword, @Param("creator") Integer creator);
+
+    /**
+     * 分页查询当前用户可访问项目
+     *
+     * @param page 分页参数
+     * @param keyword 搜索关键字
+     * @param userOrgId 用户所属组织ID
+     * @param userId 当前用户ID
+     * @return 分页结果
+     */
+    IPage<Map<String, Object>> selectAccessibleProjectsByPage(Page<Map<String, Object>> page,
+                                                              @Param("keyword") String keyword,
+                                                              @Param("userOrgId") Integer userOrgId,
+                                                              @Param("userId") Integer userId);
 }

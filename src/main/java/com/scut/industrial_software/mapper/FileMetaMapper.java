@@ -39,6 +39,20 @@ public interface FileMetaMapper extends BaseMapper<FileMeta> {
                                                    @Param("keyword") String keyword);
 
     /**
+     * 根据项目ID和文件隶属数据库类型分页查询文件列表
+     *
+     * @param page 分页参数
+     * @param projectId 项目ID
+     * @param dbType 数据库类型
+     * @param keyword 文件名关键字（可选）
+     * @return 分页结果
+     */
+    IPage<FileMeta> selectPageByProjectIdAndDbType(Page<FileMeta> page,
+                                                   @Param("projectId") Integer projectId,
+                                                   @Param("dbType") String dbType,
+                                                   @Param("keyword") String keyword);
+
+    /**
      * 根据关键字分页模糊查询文件列表
      * 
      * @param page 分页参数
@@ -46,4 +60,4 @@ public interface FileMetaMapper extends BaseMapper<FileMeta> {
      * @return 分页结果
      */
     IPage<FileMeta> selectPageByKeyword(Page<FileMeta> page, @Param("keyword") String keyword);
-} 
+}

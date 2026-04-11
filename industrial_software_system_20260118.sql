@@ -51,6 +51,7 @@ CREATE TABLE `file_meta` (
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间',
   `db_type` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '文件隶属于的数据库名称',
+  `project_id` int DEFAULT NULL COMMENT '文件所属项目ID',
   `preview_image_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '预览图资源ID',
   `preview_image_path` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '预览图物理存储路径',
   `preview_image_type` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '预览图MIME类型',
@@ -59,7 +60,8 @@ CREATE TABLE `file_meta` (
   UNIQUE KEY `file_uuid` (`file_uuid`) USING BTREE,
   KEY `idx_creator_id` (`creator_id`) USING BTREE,
   KEY `idx_file_name` (`file_name`) USING BTREE /*!80000 INVISIBLE */,
-  KEY `idx_db_type` (`db_type`) USING BTREE
+  KEY `idx_db_type` (`db_type`) USING BTREE,
+  KEY `idx_file_meta_project_id` (`project_id`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci ROW_FORMAT=DYNAMIC COMMENT='文件元数据表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -69,7 +71,7 @@ CREATE TABLE `file_meta` (
 
 LOCK TABLES `file_meta` WRITE;
 /*!40000 ALTER TABLE `file_meta` DISABLE KEYS */;
-INSERT INTO `file_meta` VALUES (5,'0c7ee539a4cb415fa195dafa5a41b4eb','测试文件1_07252353.png','C:/Users/华为Matebook14/Desktop/FileUpload\\0c7ee539a4cb415fa195dafa5a41b4eb.png',183551,'image/png',NULL,1,'测试用户','LOCAL_DISK','2025-07-25 23:53:19','2025-07-25 23:53:19','simulationResult',NULL,NULL,NULL,NULL),(6,'6fbf698b853b44798bdc81bbc9cde719','测试文件1_07252353.png','C:/Users/华为Matebook14/Desktop/FileUpload\\6fbf698b853b44798bdc81bbc9cde719.png',183551,'image/png',NULL,1,'测试用户','LOCAL_DISK','2025-07-25 23:54:06','2025-07-25 23:54:06','simulationResult',NULL,NULL,NULL,NULL),(7,'06a3c88032864a648170d68c9bf5ff0d','testFile.png','C:/Users/华为Matebook14/Desktop/FileUpload\\06a3c88032864a648170d68c9bf5ff0d.png',74017,'image/png',NULL,1,'测试用户','LOCAL_DISK','2025-07-26 00:08:19','2025-07-26 00:08:19','materialConstitutive',NULL,NULL,NULL,NULL),(8,'943a0a5bea124af1890350bd82b4edb9','testFile.png','C:/Users/华为Matebook14/Desktop/FileUpload\\943a0a5bea124af1890350bd82b4edb9.png',74017,'image/png',NULL,1,'测试用户','LOCAL_DISK','2025-07-26 00:10:26','2025-07-26 00:10:26','materialConstitutive',NULL,NULL,NULL,NULL),(9,'ec75a215e89043c9b74c82e00dd76593','testFIile01.png','C:/Users/华为Matebook14/Desktop/FileUpload\\ec75a215e89043c9b74c82e00dd76593.png',29309,'image/png',NULL,1,'测试用户','LOCAL_DISK','2025-07-28 00:03:51','2025-07-28 00:03:51','simulationResult',NULL,NULL,NULL,NULL),(10,'80ca717fcc914546a39ba506cef73756','testFIile01.png','C:/Users/华为Matebook14/Desktop/FileUpload\\80ca717fcc914546a39ba506cef73756.png',29309,'image/png',NULL,1,'测试用户','LOCAL_DISK','2025-07-28 00:03:58','2025-07-28 00:03:58','simulationResult',NULL,NULL,NULL,NULL),(11,'087629f118e64e7da0e35450960492f2','testFIile01.png','C:/Users/华为Matebook14/Desktop/FileUpload\\087629f118e64e7da0e35450960492f2.png',29309,'image/png',NULL,1,'测试用户','LOCAL_DISK','2025-07-28 00:04:47','2025-07-28 00:04:47','simulationResult',NULL,NULL,NULL,NULL),(12,'a88f92465ddf432c8c8eccb6fc04a440','testFIile01.png','C:/Users/华为Matebook14/Desktop/FileUpload\\a88f92465ddf432c8c8eccb6fc04a440.png',29309,'image/png',NULL,1,'测试用户','LOCAL_DISK','2025-07-28 00:05:12','2025-07-28 00:05:12','simulationResult',NULL,NULL,NULL,NULL);
+INSERT INTO `file_meta` VALUES (5,'0c7ee539a4cb415fa195dafa5a41b4eb','测试文件1_07252353.png','C:/Users/华为Matebook14/Desktop/FileUpload\\0c7ee539a4cb415fa195dafa5a41b4eb.png',183551,'image/png',NULL,1,'测试用户','LOCAL_DISK','2025-07-25 23:53:19','2025-07-25 23:53:19','simulationResult',NULL,NULL,NULL,NULL,NULL),(6,'6fbf698b853b44798bdc81bbc9cde719','测试文件1_07252353.png','C:/Users/华为Matebook14/Desktop/FileUpload\\6fbf698b853b44798bdc81bbc9cde719.png',183551,'image/png',NULL,1,'测试用户','LOCAL_DISK','2025-07-25 23:54:06','2025-07-25 23:54:06','simulationResult',NULL,NULL,NULL,NULL,NULL),(7,'06a3c88032864a648170d68c9bf5ff0d','testFile.png','C:/Users/华为Matebook14/Desktop/FileUpload\\06a3c88032864a648170d68c9bf5ff0d.png',74017,'image/png',NULL,1,'测试用户','LOCAL_DISK','2025-07-26 00:08:19','2025-07-26 00:08:19','materialConstitutive',NULL,NULL,NULL,NULL,NULL),(8,'943a0a5bea124af1890350bd82b4edb9','testFile.png','C:/Users/华为Matebook14/Desktop/FileUpload\\943a0a5bea124af1890350bd82b4edb9.png',74017,'image/png',NULL,1,'测试用户','LOCAL_DISK','2025-07-26 00:10:26','2025-07-26 00:10:26','materialConstitutive',NULL,NULL,NULL,NULL,NULL),(9,'ec75a215e89043c9b74c82e00dd76593','testFIile01.png','C:/Users/华为Matebook14/Desktop/FileUpload\\ec75a215e89043c9b74c82e00dd76593.png',29309,'image/png',NULL,1,'测试用户','LOCAL_DISK','2025-07-28 00:03:51','2025-07-28 00:03:51','simulationResult',NULL,NULL,NULL,NULL,NULL),(10,'80ca717fcc914546a39ba506cef73756','testFIile01.png','C:/Users/华为Matebook14/Desktop/FileUpload\\80ca717fcc914546a39ba506cef73756.png',29309,'image/png',NULL,1,'测试用户','LOCAL_DISK','2025-07-28 00:03:58','2025-07-28 00:03:58','simulationResult',NULL,NULL,NULL,NULL,NULL),(11,'087629f118e64e7da0e35450960492f2','testFIile01.png','C:/Users/华为Matebook14/Desktop/FileUpload\\087629f118e64e7da0e35450960492f2.png',29309,'image/png',NULL,1,'测试用户','LOCAL_DISK','2025-07-28 00:04:47','2025-07-28 00:04:47','simulationResult',NULL,NULL,NULL,NULL,NULL),(12,'a88f92465ddf432c8c8eccb6fc04a440','testFIile01.png','C:/Users/华为Matebook14/Desktop/FileUpload\\a88f92465ddf432c8c8eccb6fc04a440.png',29309,'image/png',NULL,1,'测试用户','LOCAL_DISK','2025-07-28 00:05:12','2025-07-28 00:05:12','simulationResult',NULL,NULL,NULL,NULL,NULL);
 /*!40000 ALTER TABLE `file_meta` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -336,6 +338,9 @@ LOCK TABLES `mod_projects` WRITE;
 INSERT INTO `mod_projects` VALUES (1,'Test-DABA',20,'2025-10-20 01:25:10',NULL,1),(2,'Test-SmallDa',20,'2025-12-05 20:31:06',NULL,1);
 /*!40000 ALTER TABLE `mod_projects` ENABLE KEYS */;
 UNLOCK TABLES;
+
+ALTER TABLE `file_meta`
+  ADD CONSTRAINT `fk_file_meta_project` FOREIGN KEY (`project_id`) REFERENCES `mod_projects` (`project_id`) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
 --
 -- Table structure for table `mod_requirements`

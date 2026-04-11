@@ -13,6 +13,11 @@ public class FileQueryDTO {
     private String dbType;
 
     /**
+     * 项目ID
+     */
+    private Integer projectId;
+
+    /**
      * 当前页码
      */
     private Integer pageNum = 1;
@@ -26,4 +31,4 @@ public class FileQueryDTO {
      * 搜索关键词（文件名或描述）
      */
     private String keyword;
-} 
+}

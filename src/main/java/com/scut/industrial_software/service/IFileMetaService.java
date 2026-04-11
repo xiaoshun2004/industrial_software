@@ -2,6 +2,7 @@ package com.scut.industrial_software.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.scut.industrial_software.common.api.ApiResult;
+import com.scut.industrial_software.model.dto.FileMetaUpdateDTO;
 import com.scut.industrial_software.model.dto.FileQueryDTO;
 import com.scut.industrial_software.model.entity.FileMeta;
 import com.scut.industrial_software.model.vo.FileMetaVO;
@@ -23,7 +24,7 @@ public interface IFileMetaService extends IService<FileMeta> {
      * @param fileName 用户指定的文件名
      * @return 文件元数据
      */
-    FileMetaVO uploadFile(String dbType, String fileName, MultipartFile file, MultipartFile previewImage);
+    FileMetaVO uploadFile(String dbType, String fileName, Integer projectId, MultipartFile file, MultipartFile previewImage);
 
     /**
      * 流式上传文件
@@ -33,7 +34,7 @@ public interface IFileMetaService extends IService<FileMeta> {
      * @param fileName  用户指定的文件名
      * @return 文件元数据
      */
-    FileMetaVO uploadFileStream(String dbType, String fileName, MultipartFile file);
+    FileMetaVO uploadFileStream(String dbType, String fileName, Integer projectId, MultipartFile file);
 
     /**
      * 下载文件
@@ -41,7 +42,7 @@ public interface IFileMetaService extends IService<FileMeta> {
      * @param field 文件唯一字符串ID
      * @return 文件字节数组
      */
-    byte[] downloadFile(String field);
+    byte[] downloadFile(String field, Integer projectId);
 
     /**
      * 获取文件信息
@@ -49,11 +50,11 @@ public interface IFileMetaService extends IService<FileMeta> {
      * @param field 文件的字符串ID
      * @return 文件元数据
      */
-    FileMetaVO getFileInfo(String field);
+    FileMetaVO getFileInfo(String field, Integer projectId);
 
-    String getPreviewContentType(String field);
+    String getPreviewContentType(String field, Integer projectId);
 
-    byte[] downloadPreview(String field);
+    byte[] downloadPreview(String field, Integer projectId);
 
     /**
      * 获取当前用户的文件列表√
@@ -77,7 +78,17 @@ public interface IFileMetaService extends IService<FileMeta> {
      * @param id 文件ID
      * @return 是否成功
      */
-    boolean deleteFile(String id);
+    boolean deleteFile(String id, Integer projectId);
+
+    /**
+     * 更新文件元数据
+     *
+     * @param id 文件ID
+     * @param projectId 项目ID
+     * @param updateDTO 更新参数
+     * @return 文件元数据
+     */
+    FileMetaVO updateFileMeta(String id, Integer projectId, FileMetaUpdateDTO updateDTO);
 
     ApiResult<Object> checkFiles(String md5, Long totalChunks);
 

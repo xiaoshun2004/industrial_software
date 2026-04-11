@@ -29,6 +29,16 @@ public class FileMetaVO {
     private String fileSize;
 
     /**
+     * 文件描述
+     */
+    private String description;
+
+    /**
+     * 项目ID
+     */
+    private Integer projectId;
+
+    /**
      * 最后更新时间
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

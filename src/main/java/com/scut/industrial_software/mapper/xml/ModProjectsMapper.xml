@@ -19,7 +19,7 @@
                 AND p.organization_id = #{userOrgId}
             </when>
             <otherwise>
-                AND p.organization_id IS NULL
+                AND 1 = 0
             </otherwise>
         </choose>
         <if test="keyword != null and keyword != ''">
@@ -49,6 +49,34 @@
             AND (
                 p.project_name LIKE CONCAT('%', #{keyword}, '%')
                 OR o.org_name LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+        ORDER BY p.creation_time DESC
+    </select>
+
+    <!-- 分页查询当前用户可访问项目 -->
+    <select id="selectAccessibleProjectsByPage" resultType="java.util.Map">
+        SELECT
+            p.project_id AS projectId,
+            p.project_name AS project_name,
+            p.creation_time AS creation_time,
+            p.project_status AS projectStatus,
+            u.username AS creator,
+            o.org_name AS organization
+        FROM mod_projects p
+        LEFT JOIN mod_users u ON p.creator = u.user_id
+        LEFT JOIN organization o ON p.organization_id = o.org_id
+        WHERE (
+            (p.project_status = 1 AND p.creator = #{userId})
+            <if test="userOrgId != null">
+                OR (p.project_status = 0 AND p.organization_id = #{userOrgId})
+            </if>
+        )
+        <if test="keyword != null and keyword != ''">
+            AND (
+                p.project_name LIKE CONCAT('%', #{keyword}, '%')
+                OR o.org_name LIKE CONCAT('%', #{keyword}, '%')
+                OR u.username LIKE CONCAT('%', #{keyword}, '%')
             )
         </if>
         ORDER BY p.creation_time DESC

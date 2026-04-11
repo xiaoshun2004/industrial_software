@@ -120,7 +120,7 @@ class OrganizationServiceIntegrationTest {
     }
 
     @Test
-    void shouldAllowGroupAdminToAddMemberAndSyncProjects() {
+    void shouldAllowGroupAdminToAddMemberAndKeepProjectOwnershipUnchanged() {
         insertOrganization(1, "org-1", 1);
         insertUserOrganization(1, 1);
         updateUserTaskPermission(1, 1);
@@ -146,7 +146,7 @@ class OrganizationServiceIntegrationTest {
                 Integer.class
         );
         assertEquals(Integer.valueOf(1), relationCount);
-        assertEquals(Integer.valueOf(1), projectOrgId);
+        assertNull(projectOrgId);
         assertEquals(Integer.valueOf(0), taskPermission);
     }
 

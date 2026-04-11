@@ -32,6 +32,14 @@ public interface IModProjectsService extends IService<ModProjects> {
      * @return 分页列表
      */
     ApiResult<?> getPrivateProjectsPage(PageRequestDTO requestDTO, Integer userId);
+
+    /**
+     * 获取当前用户可访问的项目分页列表
+     *
+     * @param requestDTO 分页请求参数
+     * @return 分页列表
+     */
+    ApiResult<?> getAccessibleProjectsPage(PageRequestDTO requestDTO);
     
     /**
      * 创建新共享项目

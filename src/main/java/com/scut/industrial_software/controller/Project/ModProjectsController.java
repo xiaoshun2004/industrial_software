@@ -44,6 +44,14 @@ public class ModProjectsController {
         }
         return modProjectsService.getPrivateProjectsPage(requestDTO, currentUser.getId().intValue());
     }
+
+    /**
+     * 获取当前用户可访问的项目分页列表
+     */
+    @PostMapping("/accessible/page")
+    public ApiResult<?> getAccessibleProjectsPage(@RequestBody PageRequestDTO requestDTO) {
+        return modProjectsService.getAccessibleProjectsPage(requestDTO);
+    }
     
     /**
      * 创建新共享项目
