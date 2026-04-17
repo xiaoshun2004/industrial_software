@@ -58,7 +58,7 @@ public class RefreshInterceptor implements HandlerInterceptor {
             log.info("RefreshInterceptor: 获取到的 Token: {}", token);
 
             // 4.1 解析token获取Claims
-            Claims claims = JwtUtils.parseToken(token);
+            Claims claims = JwtUtils.parseTokenAllowExpired(token);
 
             // 4.2 从Claims提取用户信息并存储到UserHolder
             Integer userId = claims.get("id", Integer.class);

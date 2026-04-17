@@ -1,6 +1,7 @@
 package com.scut.industrial_software.utils;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import java.util.Date;
 import java.util.Map;
@@ -41,5 +42,19 @@ public class JwtUtils {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    /**
+     * 解析 JWT 令牌，允许读取已过期令牌中的 Claims。
+     *
+     * <p>当前登录状态由 Redis 中保存的 token 及其 TTL 决定，JWT 过期不直接代表会话失效。
+     * 签名错误、格式非法等其他异常仍会抛出，由调用方按非法 token 处理。</p>
+     */
+    public static Claims parseTokenAllowExpired(String token) {
+        try {
+            return parseToken(token);
+        } catch (ExpiredJwtException e) {
+            return e.getClaims();
+        }
     }
 }
