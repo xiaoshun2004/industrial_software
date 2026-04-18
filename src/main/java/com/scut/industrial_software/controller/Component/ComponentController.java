@@ -7,6 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+
+import java.util.List;
 
 @RestController
 @Slf4j
@@ -23,7 +26,13 @@ public class ComponentController {
         return moduleDownloadService.downloadModule(componentId,rangeHeader);
     }
 
-    // 获取组件列表
+    // Batch download component installers
+    @GetMapping("/install/batch")
+    public ResponseEntity<StreamingResponseBody> installModules(@RequestParam List<Integer> componentIds) {
+        return moduleDownloadService.downloadModules(componentIds);
+    }
+
+    // Get component list
     @GetMapping
     public ApiResult<?> getModuleList(){
         return moduleDownloadService.getModuleList();
