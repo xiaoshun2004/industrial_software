@@ -29,6 +29,7 @@ public class MvcConfig implements WebMvcConfigurer {
                         "/auth/jsonLogin",
                         "/modUsers/register",
                         "/components/install/*/download",
+                        "/components/install/batch/stream",
                         "/auth/jsonLogin",
                         "/auth/verifyCode"
                         // "/dataManagement/files"
