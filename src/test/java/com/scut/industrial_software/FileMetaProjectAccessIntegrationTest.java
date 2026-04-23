@@ -5,6 +5,7 @@ import com.scut.industrial_software.common.exception.ApiException;
 import com.scut.industrial_software.model.dto.FileMetaUpdateDTO;
 import com.scut.industrial_software.model.dto.FileQueryDTO;
 import com.scut.industrial_software.model.dto.PageRequestDTO;
+import com.scut.industrial_software.model.dto.ProjectCreateDTO;
 import com.scut.industrial_software.model.dto.UserDTO;
 import com.scut.industrial_software.model.entity.FileMeta;
 import com.scut.industrial_software.model.vo.FileMetaVO;
@@ -36,6 +37,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -183,6 +185,191 @@ class FileMetaProjectAccessIntegrationTest {
         assertEquals(0L, page.getTotal());
     }
 
+    @Test
+    void shouldCreateProjectWithSimulationType() {
+        saveCurrentUser(1, "owner");
+
+        ProjectCreateDTO createDTO = new ProjectCreateDTO();
+        createDTO.setProjectName("shared-with-type");
+        createDTO.setSimulationType("结构动力学");
+
+        ApiResult<?> result = modProjectsService.createSharedProject(createDTO);
+        assertEquals(200L, result.getCode());
+
+        Map<String, Object> project = jdbcTemplate.queryForMap(
+                "SELECT project_name, simulation_type, project_status, organization_id FROM mod_projects WHERE project_name = ?",
+                "shared-with-type"
+        );
+        assertEquals("结构动力学", project.get("simulation_type"));
+        assertEquals(0, ((Number) project.get("project_status")).intValue());
+        assertEquals(1, ((Number) project.get("organization_id")).intValue());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldReturnSimulationTypeInAccessibleProjectsPage() {
+        saveCurrentUser(1, "owner");
+
+        PageRequestDTO requestDTO = new PageRequestDTO();
+        requestDTO.setPageNum(1);
+        requestDTO.setPageSize(10);
+
+        ApiResult<?> result = modProjectsService.getAccessibleProjectsPage(requestDTO);
+        Map<String, Object> data = (Map<String, Object>) result.getData();
+        List<Map<String, Object>> records = (List<Map<String, Object>>) data.get("records");
+        Map<String, Object> privateProject = records.stream()
+                .filter(record -> getProjectIdFromRecord(record).equals(30))
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals("多体动力学", privateProject.get("simulationType"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldReturnSimulationTypeInSharedAndPrivateProjectsPage() {
+        saveCurrentUser(1, "owner");
+
+        PageRequestDTO requestDTO = new PageRequestDTO();
+        requestDTO.setPageNum(1);
+        requestDTO.setPageSize(10);
+
+        ApiResult<?> sharedResult = modProjectsService.getSharedProjectsPage(requestDTO);
+        Map<String, Object> sharedData = (Map<String, Object>) sharedResult.getData();
+        List<Map<String, Object>> sharedRecords = (List<Map<String, Object>>) sharedData.get("records");
+        Map<String, Object> sharedProject = sharedRecords.stream()
+                .filter(record -> getProjectIdFromRecord(record).equals(10))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("结构动力学", sharedProject.get("simulationType"));
+
+        ApiResult<?> privateResult = modProjectsService.getPrivateProjectsPage(requestDTO, 1);
+        Map<String, Object> privateData = (Map<String, Object>) privateResult.getData();
+        List<Map<String, Object>> privateRecords = (List<Map<String, Object>>) privateData.get("records");
+        Map<String, Object> privateProject = privateRecords.stream()
+                .filter(record -> getProjectIdFromRecord(record).equals(30))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("多体动力学", privateProject.get("simulationType"));
+    }
+
+    @Test
+    void shouldRejectInvalidSimulationTypeWhenCreateProject() {
+        saveCurrentUser(1, "owner");
+
+        ProjectCreateDTO createDTO = new ProjectCreateDTO();
+        createDTO.setProjectName("invalid-type-project");
+        createDTO.setSimulationType("错误类型");
+
+        ApiResult<?> result = modProjectsService.createPrivateProject(createDTO);
+        assertEquals(-1L, result.getCode());
+        assertEquals("仿真类型不正确，应为：结构动力学、冲击动力学、多体动力学", result.getMessage());
+    }
+
+    @Test
+    void shouldRejectMissingSimulationTypeWhenCreateProject() {
+        saveCurrentUser(1, "owner");
+
+        ProjectCreateDTO createDTO = new ProjectCreateDTO();
+        createDTO.setProjectName("missing-type-project");
+
+        ApiResult<?> result = modProjectsService.createPrivateProject(createDTO);
+        assertEquals(-1L, result.getCode());
+        assertEquals("仿真类型不正确，应为：结构动力学、冲击动力学、多体动力学", result.getMessage());
+    }
+
+    @Test
+    void shouldAllowOnlyCreatorToManagePrivateProjects() {
+        saveCurrentUser(2, "member");
+        ApiResult<?> memberEncryptResult = modProjectsService.encryptProject(30);
+        assertEquals(-1L, memberEncryptResult.getCode());
+        assertEquals("权限不足", memberEncryptResult.getMessage());
+
+        ApiResult<?> memberDeleteResult = modProjectsService.deleteProject(30);
+        assertEquals(-1L, memberDeleteResult.getCode());
+        assertEquals("权限不足", memberDeleteResult.getMessage());
+
+        saveCurrentUser(1, "owner");
+        ApiResult<?> creatorDecryptResult = modProjectsService.decryptProject(30);
+        assertEquals(200L, creatorDecryptResult.getCode());
+
+        Map<String, Object> decryptedProject = jdbcTemplate.queryForMap(
+                "SELECT project_status, organization_id FROM mod_projects WHERE project_id = ?",
+                30
+        );
+        assertEquals(0, ((Number) decryptedProject.get("project_status")).intValue());
+        assertEquals(1, ((Number) decryptedProject.get("organization_id")).intValue());
+
+        jdbcTemplate.update(
+                "INSERT INTO mod_projects(project_id, project_name, creator, creation_time, organization_id, project_status) VALUES(?, ?, ?, ?, ?, ?)",
+                31,
+                "private-owner-for-delete",
+                1,
+                Timestamp.valueOf(LocalDateTime.now()),
+                null,
+                1
+        );
+
+        ApiResult<?> creatorDeleteResult = modProjectsService.deleteProject(31);
+        assertEquals(200L, creatorDeleteResult.getCode());
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM mod_projects WHERE project_id = ?",
+                Integer.class,
+                31
+        ));
+    }
+
+    @Test
+    void shouldAllowOnlyOrganizationAdminOrSystemAdminToManageSharedProjects() {
+        saveCurrentUser(1, "owner");
+        ApiResult<?> creatorEncryptResult = modProjectsService.encryptProject(10);
+        assertEquals(-1L, creatorEncryptResult.getCode());
+        assertEquals("权限不足", creatorEncryptResult.getMessage());
+
+        saveCurrentUser(2, "member");
+        ApiResult<?> memberDeleteResult = modProjectsService.deleteProject(10);
+        assertEquals(-1L, memberDeleteResult.getCode());
+        assertEquals("权限不足", memberDeleteResult.getMessage());
+
+        saveCurrentUser(4, "orgAdmin");
+        ApiResult<?> adminEncryptResult = modProjectsService.encryptProject(10);
+        assertEquals(200L, adminEncryptResult.getCode());
+
+        Map<String, Object> encryptedProject = jdbcTemplate.queryForMap(
+                "SELECT project_status, organization_id FROM mod_projects WHERE project_id = ?",
+                10
+        );
+        assertEquals(1, ((Number) encryptedProject.get("project_status")).intValue());
+        assertNull(encryptedProject.get("organization_id"));
+
+        jdbcTemplate.update(
+                "INSERT INTO mod_projects(project_id, project_name, creator, creation_time, organization_id, project_status) VALUES(?, ?, ?, ?, ?, ?)",
+                40,
+                "shared-org-1-for-admin-delete",
+                1,
+                Timestamp.valueOf(LocalDateTime.now()),
+                1,
+                0
+        );
+
+        ApiResult<?> adminDeleteResult = modProjectsService.deleteProject(40);
+        assertEquals(200L, adminDeleteResult.getCode());
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM mod_projects WHERE project_id = ?",
+                Integer.class,
+                40
+        ));
+
+        saveCurrentUser(5, "sysAdmin");
+        ApiResult<?> systemDeleteResult = modProjectsService.deleteProject(20);
+        assertEquals(200L, systemDeleteResult.getCode());
+        assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM mod_projects WHERE project_id = ?",
+                Integer.class,
+                20
+        ));
+    }
+
     private FileMetaVO uploadTextFile(Integer projectId, String fileName, String content) {
         MockMultipartFile file = new MockMultipartFile(
                 "file",
@@ -204,6 +391,7 @@ class FileMetaProjectAccessIntegrationTest {
 
     private void recreateTables() {
         jdbcTemplate.execute("DROP TABLE IF EXISTS file_meta");
+        jdbcTemplate.execute("DROP TABLE IF EXISTS mod_tasks");
         jdbcTemplate.execute("DROP TABLE IF EXISTS mod_projects");
         jdbcTemplate.execute("DROP TABLE IF EXISTS user_organization");
         jdbcTemplate.execute("DROP TABLE IF EXISTS organization");
@@ -243,9 +431,17 @@ class FileMetaProjectAccessIntegrationTest {
                     project_id INT PRIMARY KEY,
                     project_name VARCHAR(255),
                     creator INT NOT NULL,
+                    simulation_type VARCHAR(32),
                     creation_time TIMESTAMP NOT NULL,
                     organization_id INT,
                     project_status INT
+                )
+                """);
+
+        jdbcTemplate.execute("""
+                CREATE TABLE mod_tasks (
+                    task_id INT AUTO_INCREMENT PRIMARY KEY,
+                    project_id INT
                 )
                 """);
 
@@ -277,6 +473,8 @@ class FileMetaProjectAccessIntegrationTest {
         insertUser(1, "owner", 0);
         insertUser(2, "member", 0);
         insertUser(3, "outsider", 0);
+        insertUser(4, "orgAdmin", 1);
+        insertUser(5, "sysAdmin", 0, 1);
 
         insertOrganization(1, "org-1", 1);
         insertOrganization(2, "org-2", 3);
@@ -284,20 +482,26 @@ class FileMetaProjectAccessIntegrationTest {
         insertUserOrganization(1, 1);
         insertUserOrganization(2, 1);
         insertUserOrganization(3, 2);
+        insertUserOrganization(4, 1);
 
-        insertProject(10, "shared-org-1", 1, 1, 0);
-        insertProject(20, "shared-org-2", 3, 2, 0);
-        insertProject(30, "private-owner", 1, null, 1);
+        insertProject(10, "shared-org-1", 1, "结构动力学", 1, 0);
+        insertProject(20, "shared-org-2", 3, "冲击动力学", 2, 0);
+        insertProject(30, "private-owner", 1, "多体动力学", null, 1);
         insertLegacyFile();
     }
 
     private void insertUser(int userId, String username, int taskPermission) {
+        insertUser(userId, username, taskPermission, 0);
+    }
+
+    private void insertUser(int userId, String username, int taskPermission, int permission) {
         jdbcTemplate.update(
                 "INSERT INTO mod_users(user_id, username, password, permission, task_permission, phone, version) VALUES(?, ?, 'pwd', 0, ?, '13800000000', 0)",
                 userId,
                 username,
                 taskPermission
         );
+        jdbcTemplate.update("UPDATE mod_users SET permission = ? WHERE user_id = ?", permission, userId);
     }
 
     private void insertOrganization(int orgId, String orgName, int createUserId) {
@@ -314,12 +518,13 @@ class FileMetaProjectAccessIntegrationTest {
         jdbcTemplate.update("INSERT INTO user_organization(user_id, org_id) VALUES(?, ?)", userId, orgId);
     }
 
-    private void insertProject(int projectId, String projectName, int creator, Integer organizationId, int projectStatus) {
+    private void insertProject(int projectId, String projectName, int creator, String simulationType, Integer organizationId, int projectStatus) {
         jdbcTemplate.update(
-                "INSERT INTO mod_projects(project_id, project_name, creator, creation_time, organization_id, project_status) VALUES(?, ?, ?, ?, ?, ?)",
+                "INSERT INTO mod_projects(project_id, project_name, creator, simulation_type, creation_time, organization_id, project_status) VALUES(?, ?, ?, ?, ?, ?, ?)",
                 projectId,
                 projectName,
                 creator,
+                simulationType,
                 Timestamp.valueOf(LocalDateTime.now()),
                 organizationId,
                 projectStatus

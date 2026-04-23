@@ -14,6 +14,12 @@ public class ProjectCreateDTO {
      */
     @JsonProperty("project_name")
     private String projectName;
+
+    /**
+     * 仿真类型
+     */
+    @JsonProperty("simulation_type")
+    private String simulationType;
     
     /**
      * 创建者
