@@ -28,9 +28,9 @@ public class MvcConfig implements WebMvcConfigurer {
                         "/auth/verifyCode",
                         "/auth/jsonLogin",
                         "/modUsers/register",
+                        "/components/install/*/download",
                         "/auth/jsonLogin",
                         "/auth/verifyCode"
-                        // "/components/install"
                         // "/dataManagement/files"
                 )
                 .order(1); // Set order to ensure it runs after RefreshInterceptor

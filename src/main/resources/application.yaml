@@ -103,15 +103,10 @@ license:
 
 # 组件安装包存储位置
 component:
-  store:
-    impact_preTreatment: D:/component/impact/pre-treatment/
-    impact_solver_cpu: D:/Project/Java/industrial_software_extra/bin.rar
-    impact_solver_gpu: D:/component/impact/solver/gpu/
-    structure_preTreatment: D:/Project/Java/industrial_software_extra/PERA SIM Mechanical 2025-2025-12-16.exe
-    structure_solver: D:/component/structure/solver/
-    multipleBody_preTreatment: D:/component/multibody/pre-treatment/
-    multipleBody_solver: D:/component/multibody/solver/
-    postProcessing: D:/component/post-processing/
+  download:
+    source-root: D:/resources
+    batch-root: D:/resources/tmp/component-batch
+    public-base-url: http://localhost:8081
 
 # 阿里云配置(生产环境不要把密钥放在这里，放在环境变量中，或者放入Nacos/Apollo配置中心中)
 aliyun:

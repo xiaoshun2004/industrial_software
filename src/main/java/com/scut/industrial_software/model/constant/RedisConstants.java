@@ -29,7 +29,9 @@ public class RedisConstants {
     // 文件分片上传的索引总数
     public static final String FILE_UPLOAD_CHUNK_PREFIX = "file:upload:chunk:";
 
-    // token 的过期时间（30分钟）
+    // 组件单文件下载的临时 Token 前缀
+    public static final String COMPONENT_SINGLE_DOWNLOAD_TOKEN_PREFIX = "component:single-download:token:";
+
     public static final long TOKEN_TTL = 30L;
 
     // 黑名单token过期时间

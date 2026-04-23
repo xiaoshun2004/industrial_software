@@ -3,7 +3,6 @@ package com.scut.industrial_software.model.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import jakarta.persistence.criteria.CriteriaBuilder;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -53,8 +52,4 @@ public class Components {
      */
     private String resourceType;
 
-    /**
-     * 组件下载地址
-     */
-    private String address;
 }
