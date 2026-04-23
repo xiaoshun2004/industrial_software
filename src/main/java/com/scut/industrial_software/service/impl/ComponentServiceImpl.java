@@ -6,6 +6,7 @@ import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.config.ComponentDownloadProperties;
 import com.scut.industrial_software.mapper.ComponentsMapper;
 import com.scut.industrial_software.model.constant.RedisConstants;
+import com.scut.industrial_software.model.dto.ComponentBatchDownloadRequestDTO;
 import com.scut.industrial_software.model.dto.UserDTO;
 import com.scut.industrial_software.model.entity.Components;
 import com.scut.industrial_software.service.IComponentService;
@@ -41,6 +42,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -51,6 +53,7 @@ public class ComponentServiceImpl extends ServiceImpl<ComponentsMapper, Componen
     private static final String INSTALL_FILE_NAME = "install.exe";
     private static final String BATCH_ZIP_FILE_NAME = "components-install-packages.zip";
     private static final String SINGLE_DOWNLOAD_PATH_TEMPLATE = "/components/install/%d/download?token=%s";
+    private static final String BATCH_STREAM_PATH_TEMPLATE = "/components/install/batch/stream?token=%s";
 
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
@@ -62,37 +65,17 @@ public class ComponentServiceImpl extends ServiceImpl<ComponentsMapper, Componen
     private ComponentDownloadProperties componentDownloadProperties;
 
     @Override
-    public ResponseEntity<Resource> downloadModule(Integer componentId, String rangeHeader) {
-        return downloadModuleInternal(componentId, rangeHeader);
-    }
-
-    // 生成单组件下载的临时Token，前端可以使用该Token调用下载接口进行安装，适用于大型组件的安装包
-    @Override
     public ApiResult<?> createSingleDownloadToken(Integer componentId) {
-        UserDTO currentUser = UserHolder.getUser();
-        if (currentUser == null || currentUser.getId() == null) {
-            return ApiResult.unauthorized("请先登录");
-        }
-        if (componentId == null || componentId <= 0) {
-            return ApiResult.failed("组件ID无效");
-        }
-
         try {
-            Components component = baseMapper.selectById(componentId);
-            if (component == null) {
-                return ApiResult.resourceNotFound("组件不存在");
-            }
+            UserDTO currentUser = requireCurrentUser();
+            resolveSinglePackage(componentId);
 
-            Path filePath = resolveInstallPackagePath(getResourceBasePath(), componentId);
-            if (filePath == null) {
-                return ApiResult.failed("组件安装包路径非法");
-            }
-            if (!Files.isRegularFile(filePath)) {
-                return ApiResult.resourceNotFound("组件安装包不存在");
-            }
-
-            String token = UUID.randomUUID().toString().replace("-", "");
-            storeSingleDownloadToken(token, currentUser.getId(), componentId);
+            String token = generateToken();
+            storeJsonToken(
+                    RedisConstants.COMPONENT_SINGLE_DOWNLOAD_TOKEN_PREFIX,
+                    token,
+                    new SingleDownloadTokenPayload(currentUser.getId(), componentId)
+            );
 
             Map<String, String> result = new HashMap<>();
             result.put("downloadUrl",
@@ -100,246 +83,258 @@ public class ComponentServiceImpl extends ServiceImpl<ComponentsMapper, Componen
 
             log.info("生成单组件下载临时Token成功，userId: {}, componentId: {}", currentUser.getId(), componentId);
             return ApiResult.success(result);
+        } catch (ComponentDownloadException e) {
+            if (e.getStatus() == HttpStatus.NOT_FOUND) {
+                return ApiResult.resourceNotFound(e.getMessage());
+            }
+            if (e.getStatus() == HttpStatus.UNAUTHORIZED) {
+                return ApiResult.unauthorized(e.getMessage());
+            }
+            return ApiResult.failed(e.getMessage());
         } catch (Exception e) {
             log.error("生成单组件下载临时Token失败，componentId: {}", componentId, e);
             return ApiResult.internalServerError("生成组件下载链接失败");
         }
     }
 
-    // 使用临时Token下载组件安装包，前端需要提供之前生成的Token，后端会验证Token的有效性后允许下载，适用于大型组件的安装包
     @Override
     public ResponseEntity<Resource> downloadModuleByToken(Integer componentId, String token, String rangeHeader) {
-        if (componentId == null || componentId <= 0 || token == null || token.isBlank()) {
+        if (token == null || token.isBlank()) {
             return ResponseEntity.badRequest().build();
         }
 
         try {
-            SingleDownloadTokenPayload payload = loadSingleDownloadToken(token);
-            if (payload == null) {
-                log.warn("单组件下载临时Token无效或已过期，componentId: {}", componentId);
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-            }
-            if (!componentId.equals(payload.getComponentId())) {
-                log.warn("单组件下载临时Token与组件不匹配，tokenComponentId: {}, requestComponentId: {}",
-                        payload.getComponentId(), componentId);
+            SingleDownloadTokenPayload payload = readReusableToken(
+                    RedisConstants.COMPONENT_SINGLE_DOWNLOAD_TOKEN_PREFIX,
+                    token,
+                    SingleDownloadTokenPayload.class
+            );
+            if (payload == null || !componentId.equals(payload.componentId())) {
+                log.warn("单组件下载临时Token无效、已过期或与组件不匹配，componentId: {}", componentId);
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
 
-            return downloadModuleInternal(componentId, rangeHeader);
+            return buildSingleDownloadResponse(resolveSinglePackage(componentId), rangeHeader);
+        } catch (ComponentDownloadException e) {
+            return ResponseEntity.status(e.getStatus()).build();
         } catch (Exception e) {
             log.error("通过临时Token下载单组件失败，componentId: {}", componentId, e);
             return ResponseEntity.internalServerError().build();
         }
     }
 
-    // 内部方法，处理组件安装包的下载逻辑，支持断点续传
-    private ResponseEntity<Resource> downloadModuleInternal(Integer componentId, String rangeHeader) {
-        log.info("正在下载组件安装包，componentId: {}, Range: {}", componentId, rangeHeader);
-
-        if (componentId == null || componentId <= 0) {
-            log.warn("无效的组件ID: {}", componentId);
-            return ResponseEntity.badRequest().build();
-        }
-
-        try {
-            Path basePath = getResourceBasePath();
-            Path filePath = resolveInstallPackagePath(basePath, componentId);
-            if (filePath == null) {
-                return ResponseEntity.badRequest().build();
-            }
-
-            File file = filePath.toFile();
-            if (!file.exists()) {
-                log.warn("组件安装包不存在: {}", filePath);
-                return ResponseEntity.notFound().build();
-            }
-
-            Components component = baseMapper.selectById(componentId);
-            if (component == null) {
-                log.warn("组件不存在，componentId: {}", componentId);
-                return ResponseEntity.notFound().build();
-            }
-
-            String fileNameWithExtension = buildInstallPackageName(component, componentId);
-            String encodedFileName = URLEncoder.encode(fileNameWithExtension, StandardCharsets.UTF_8)
-                    .replace("+", "%20");
-            long fileSize = file.length();
-
-            if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
-                return handleRangeRequest(filePath, fileSize, encodedFileName, rangeHeader);
-            }
-
-            Resource resource = new FileSystemResource(file);
-            return ResponseEntity.ok()
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .contentLength(fileSize)
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"" + encodedFileName + "\"; filename*=UTF-8''" + encodedFileName)
-                    .header(HttpHeaders.ACCEPT_RANGES, "bytes")
-                    .body(resource);
-        } catch (Exception e) {
-            log.error("下载组件安装包失败，componentId: {}", componentId, e);
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
-    // 批量下载组件安装包，前端提供多个组件ID，后端将对应的安装包打包成一个ZIP文件进行下载
     @Override
-    public ResponseEntity<StreamingResponseBody> downloadModules(List<Integer> componentIds) {
-        log.info("姝ｅ湪鎵归噺涓嬭浇缁勪欢瀹夎鍖咃紝componentIds: {}", componentIds);
+    public ApiResult<?> createBatchStreamToken(ComponentBatchDownloadRequestDTO requestDTO) {
+        try {
+            UserDTO currentUser = requireCurrentUser();
+            List<ComponentPackage> packages = resolveBatchPackages(requestDTO == null ? null : requestDTO.getComponentIds());
 
-        if (componentIds == null || componentIds.isEmpty() || componentIds.stream().anyMatch(id -> id == null || id <= 0)) {
-            log.warn("鎵归噺涓嬭浇缁勪欢鍙傛暟鏃犳晥: {}", componentIds);
+            String token = generateToken();
+            storeJsonToken(
+                    RedisConstants.COMPONENT_BATCH_STREAM_TOKEN_PREFIX,
+                    token,
+                    new BatchStreamTokenPayload(currentUser.getId(), toComponentIds(packages))
+            );
+
+            Map<String, String> result = new HashMap<>();
+            result.put("downloadUrl",
+                    buildAbsoluteDownloadUrl(String.format(BATCH_STREAM_PATH_TEMPLATE, token)));
+
+            log.info("生成批量下载流式临时Token成功，userId: {}, componentIds: {}", currentUser.getId(), toComponentIds(packages));
+            return ApiResult.success(result);
+        } catch (ComponentDownloadException e) {
+            if (e.getStatus() == HttpStatus.NOT_FOUND) {
+                return ApiResult.resourceNotFound(e.getMessage());
+            }
+            if (e.getStatus() == HttpStatus.UNAUTHORIZED) {
+                return ApiResult.unauthorized(e.getMessage());
+            }
+            return ApiResult.failed(e.getMessage());
+        } catch (Exception e) {
+            log.error("生成批量下载流式临时Token失败", e);
+            return ApiResult.internalServerError("生成批量下载链接失败");
+        }
+    }
+
+    @Override
+    public ResponseEntity<StreamingResponseBody> downloadModulesByToken(String token) {
+        if (token == null || token.isBlank()) {
             return ResponseEntity.badRequest().build();
         }
 
         try {
-            Path basePath = getResourceBasePath();
-            List<ComponentPackage> packages = new ArrayList<>();
-            Set<String> usedEntryNames = new HashSet<>();
-
-            for (Integer componentId : new LinkedHashSet<>(componentIds)) {
-                Components component = baseMapper.selectById(componentId);
-                if (component == null) {
-                    log.warn("鎵归噺涓嬭浇缁勪欢涓嶅瓨鍦紝componentId: {}", componentId);
-                    return ResponseEntity.notFound().build();
-                }
-
-                Path filePath = resolveInstallPackagePath(basePath, componentId);
-                if (filePath == null) {
-                    log.warn("鎵归噺涓嬭浇缁勪欢璺緞闈炴硶锛宑omponentId: {}", componentId);
-                    return ResponseEntity.badRequest().build();
-                }
-
-                if (!Files.isRegularFile(filePath)) {
-                    log.warn("鎵归噺涓嬭浇缁勪欢瀹夎鍖呬笉瀛樺湪锛宑omponentId: {}, filePath: {}", componentId, filePath);
-                    return ResponseEntity.notFound().build();
-                }
-
-                String entryName = uniqueZipEntryName(buildInstallPackageName(component, componentId), componentId, usedEntryNames);
-                packages.add(new ComponentPackage(filePath, entryName));
+            BatchStreamTokenPayload payload = consumeOneTimeToken(
+                    RedisConstants.COMPONENT_BATCH_STREAM_TOKEN_PREFIX,
+                    token,
+                    BatchStreamTokenPayload.class
+            );
+            if (payload == null || payload.componentIds() == null || payload.componentIds().isEmpty()) {
+                log.warn("批量下载流式临时Token无效或已过期");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
 
-            StreamingResponseBody body = outputStream -> {
-                byte[] buffer = new byte[8192];
-                try (ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream, StandardCharsets.UTF_8)) {
-                    for (ComponentPackage componentPackage : packages) {
-                        ZipEntry entry = new ZipEntry(componentPackage.entryName());
-                        entry.setSize(Files.size(componentPackage.filePath()));
-                        zipOutputStream.putNextEntry(entry);
-
-                        try (InputStream inputStream = Files.newInputStream(componentPackage.filePath())) {
-                            int length;
-                            while ((length = inputStream.read(buffer)) != -1) {
-                                zipOutputStream.write(buffer, 0, length);
-                            }
-                        }
-
-                        zipOutputStream.closeEntry();
-                    }
-                }
-            };
-
-            String encodedFileName = URLEncoder.encode(BATCH_ZIP_FILE_NAME, StandardCharsets.UTF_8)
-                    .replace("+", "%20");
-
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType("application/zip"))
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"" + encodedFileName + "\"; filename*=UTF-8''" + encodedFileName)
-                    .body(body);
-
+            return buildBatchDownloadResponse(resolveBatchPackages(payload.componentIds()));
+        } catch (ComponentDownloadException e) {
+            return ResponseEntity.status(e.getStatus()).build();
         } catch (Exception e) {
-            log.error("鎵归噺涓嬭浇缁勪欢瀹夎鍖呭け璐ワ紝componentIds: {}", componentIds, e);
+            log.error("通过临时Token批量下载组件失败", e);
             return ResponseEntity.internalServerError().build();
         }
     }
 
-    /**
-     * 处理断点续传的请求，根据 Range 头部信息返回对应的文件片段，支持单个范围请求
-     */
-    private ResponseEntity<Resource> handleRangeRequest(Path filePath, long fileSize,
-                                                        String encodedFileName, String rangeHeader) throws IOException {
+    @Override
+    public ApiResult<?> getModuleList() {
+        log.info("正在获取组件列表");
+        return ApiResult.success(baseMapper.selectList(null));
+    }
 
-        String range = rangeHeader.replace("bytes=", "");
-        String[] ranges = range.split("-");
+    private UserDTO requireCurrentUser() {
+        UserDTO currentUser = UserHolder.getUser();
+        if (currentUser == null || currentUser.getId() == null) {
+            throw new ComponentDownloadException(HttpStatus.UNAUTHORIZED, "请先登录");
+        }
+        return currentUser;
+    }
 
-        long start = Long.parseLong(ranges[0].trim());
-        long end = (ranges.length > 1 && !ranges[1].trim().isEmpty()) ?
-                Long.parseLong(ranges[1].trim()) : fileSize - 1;
+    private ResponseEntity<Resource> buildSingleDownloadResponse(ComponentPackage componentPackage, String rangeHeader)
+            throws IOException {
+        File file = componentPackage.filePath().toFile();
+        String encodedFileName = encodeFileName(componentPackage.entryName());
+        long fileSize = file.length();
 
-        if (start < 0 || end >= fileSize || start > end) {
-            return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
-                    .header(HttpHeaders.CONTENT_RANGE, "bytes */" + fileSize)
-                    .build();
+        if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
+            return handleRangeRequest(componentPackage.filePath(), fileSize, encodedFileName, rangeHeader);
         }
 
-        long contentLength = end - start + 1;
-        RandomAccessFile raf = new RandomAccessFile(filePath.toFile(), "r");
-        raf.seek(start);
-
-        InputStream rangeInputStream = new InputStream() {
-            private long remaining = contentLength;
-
-            // 关闭InputStream时同时关闭RandomAccessFile，确保资源正确释放
-            @Override
-            public int read() throws IOException {
-                if (remaining <= 0) {
-                    return -1;
-                }
-                remaining--;
-                return raf.read();
-            }
-
-            // 重写read(byte[], int, int)方法以提高读取效率，支持一次读取多个字节
-            @Override
-            public int read(byte[] b, int off, int len) throws IOException {
-                if (remaining <= 0) {
-                    return -1;
-                }
-                int toRead = (int) Math.min(len, remaining);
-                int bytesRead = raf.read(b, off, toRead);
-                if (bytesRead > 0) {
-                    remaining -= bytesRead;
-                }
-                return bytesRead;
-            }
-            // 其他InputStream方法可以根据需要重写，例如available()、close()等，确保正确处理流的状态和资源释放
-            @Override
-            public void close() throws IOException {
-                raf.close();
-            }
-        };
-        // 返回206 Partial Content响应，包含Content-Range和Accept-Ranges头部信息，指示支持断点续传
-        return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+        return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .contentLength(contentLength)
-                .header(HttpHeaders.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + fileSize)
-                .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                .contentLength(fileSize)
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + encodedFileName + "\"; filename*=UTF-8''" + encodedFileName)
-                .body(new InputStreamResource(rangeInputStream) {
-                    @Override
-                    public String getFilename() {
-                        return encodedFileName;
-                    }
-                });
+                .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                .body(new FileSystemResource(file));
     }
 
-    // 根据组件ID解析安装包的文件路径，确保路径安全，防止路径遍历攻击
-    private Path resolveInstallPackagePath(Path basePath, Integer componentId) {
-        String relativePath = String.valueOf(componentId);
-        Path resolvedPath = basePath.resolve(relativePath).normalize();
+    private ResponseEntity<StreamingResponseBody> buildBatchDownloadResponse(List<ComponentPackage> packages) {
+        StreamingResponseBody body = outputStream -> {
+            byte[] buffer = new byte[8192];
+            try (ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream, StandardCharsets.UTF_8)) {
+                zipOutputStream.setLevel(Deflater.NO_COMPRESSION);
+                for (ComponentPackage componentPackage : packages) {
+                    ZipEntry entry = new ZipEntry(componentPackage.entryName());
+                    entry.setSize(Files.size(componentPackage.filePath()));
+                    zipOutputStream.putNextEntry(entry);
 
-        if (!resolvedPath.startsWith(basePath)) {
-            log.error("非法路径尝试: {} -> {}", relativePath, resolvedPath);
-            return null;
+                    try (InputStream inputStream = Files.newInputStream(componentPackage.filePath())) {
+                        int length;
+                        while ((length = inputStream.read(buffer)) != -1) {
+                            zipOutputStream.write(buffer, 0, length);
+                        }
+                    }
+
+                    zipOutputStream.closeEntry();
+                }
+            }
+        };
+
+        String encodedFileName = encodeFileName(BATCH_ZIP_FILE_NAME);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/zip"))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + encodedFileName + "\"; filename*=UTF-8''" + encodedFileName)
+                .body(body);
+    }
+
+    private ComponentPackage resolveSinglePackage(Integer componentId) {
+        validateComponentId(componentId);
+
+        Components component = baseMapper.selectById(componentId);
+        if (component == null) {
+            throw new ComponentDownloadException(HttpStatus.NOT_FOUND, "组件不存在");
         }
 
-        return resolvedPath.resolve(INSTALL_FILE_NAME).normalize();
+        Path filePath = resolveInstallPackagePath(getResourceBasePath(), componentId);
+        if (filePath == null) {
+            throw new ComponentDownloadException(HttpStatus.BAD_REQUEST, "组件安装包路径非法");
+        }
+        if (!Files.isRegularFile(filePath)) {
+            throw new ComponentDownloadException(HttpStatus.NOT_FOUND, "组件安装包不存在");
+        }
+
+        return new ComponentPackage(filePath, buildInstallPackageName(component, componentId), componentId);
     }
 
-    // 获取资源文件的根路径，确保配置项存在且合法
+    private List<ComponentPackage> resolveBatchPackages(List<Integer> componentIds) {
+        List<Integer> normalizedIds = normalizeComponentIds(componentIds);
+        List<ComponentPackage> packages = new ArrayList<>();
+        Set<String> usedEntryNames = new HashSet<>();
+
+        for (Integer componentId : normalizedIds) {
+            ComponentPackage basePackage = resolveSinglePackage(componentId);
+            String uniqueEntryName = uniqueZipEntryName(basePackage.entryName(), componentId, usedEntryNames);
+            packages.add(new ComponentPackage(basePackage.filePath(), uniqueEntryName, componentId));
+        }
+
+        return packages;
+    }
+
+    private List<Integer> normalizeComponentIds(List<Integer> componentIds) {
+        if (componentIds == null || componentIds.isEmpty()) {
+            throw new ComponentDownloadException(HttpStatus.BAD_REQUEST, "组件ID列表不能为空");
+        }
+
+        List<Integer> normalizedIds = new ArrayList<>();
+        for (Integer componentId : new LinkedHashSet<>(componentIds)) {
+            validateComponentId(componentId);
+            normalizedIds.add(componentId);
+        }
+        return normalizedIds;
+    }
+
+    private void validateComponentId(Integer componentId) {
+        if (componentId == null || componentId <= 0) {
+            throw new ComponentDownloadException(HttpStatus.BAD_REQUEST, "组件ID无效");
+        }
+    }
+
+    private List<Integer> toComponentIds(List<ComponentPackage> packages) {
+        return packages.stream().map(ComponentPackage::componentId).toList();
+    }
+
+    private void storeJsonToken(String keyPrefix, String token, Object payload) throws IOException {
+        stringRedisTemplate.opsForValue().set(
+                keyPrefix + token,
+                objectMapper.writeValueAsString(payload),
+                getTokenExpireMinutes(),
+                TimeUnit.MINUTES
+        );
+    }
+
+    private <T> T readReusableToken(String keyPrefix, String token, Class<T> payloadType) throws IOException {
+        String payloadJson = stringRedisTemplate.opsForValue().get(keyPrefix + token);
+        if (payloadJson == null || payloadJson.isBlank()) {
+            return null;
+        }
+        return objectMapper.readValue(payloadJson, payloadType);
+    }
+
+    private <T> T consumeOneTimeToken(String keyPrefix, String token, Class<T> payloadType) throws IOException {
+        String payloadJson = stringRedisTemplate.opsForValue().getAndDelete(keyPrefix + token);
+        if (payloadJson == null || payloadJson.isBlank()) {
+            return null;
+        }
+        return objectMapper.readValue(payloadJson, payloadType);
+    }
+
+    private String generateToken() {
+        return UUID.randomUUID().toString().replace("-", "");
+    }
+
+    private int getTokenExpireMinutes() {
+        Integer tokenExpireMinutes = componentDownloadProperties.getTokenExpireMinutes();
+        return tokenExpireMinutes == null || tokenExpireMinutes <= 0 ? 10 : tokenExpireMinutes;
+    }
+
     private Path getResourceBasePath() {
         String sourceRoot = componentDownloadProperties.getSourceRoot();
         if (sourceRoot == null || sourceRoot.isBlank()) {
@@ -348,33 +343,15 @@ public class ComponentServiceImpl extends ServiceImpl<ComponentsMapper, Componen
         return Paths.get(sourceRoot).normalize().toAbsolutePath();
     }
 
-    // 存储单组件下载的临时Token，关联用户ID和组件ID，并设置过期时间，使用Redis作为存储介质
-    private void storeSingleDownloadToken(String token, Integer userId, Integer componentId) throws IOException {
-        SingleDownloadTokenPayload payload = new SingleDownloadTokenPayload(userId, componentId);
-        int tokenExpireMinutes = componentDownloadProperties.getTokenExpireMinutes() == null
-                || componentDownloadProperties.getTokenExpireMinutes() <= 0
-                ? 10
-                : componentDownloadProperties.getTokenExpireMinutes();
-
-        stringRedisTemplate.opsForValue().set(
-                RedisConstants.COMPONENT_SINGLE_DOWNLOAD_TOKEN_PREFIX + token,
-                objectMapper.writeValueAsString(payload),
-                tokenExpireMinutes,
-                TimeUnit.MINUTES
-        );
-    }
-
-    // 加载单组件下载的临时Token，验证Token的有效性并解析出关联的用户ID和组件ID，供下载接口使用
-    private SingleDownloadTokenPayload loadSingleDownloadToken(String token) throws IOException {
-        String payloadJson = stringRedisTemplate.opsForValue()
-                .get(RedisConstants.COMPONENT_SINGLE_DOWNLOAD_TOKEN_PREFIX + token);
-        if (payloadJson == null || payloadJson.isBlank()) {
+    private Path resolveInstallPackagePath(Path basePath, Integer componentId) {
+        Path resolvedPath = basePath.resolve(String.valueOf(componentId)).normalize();
+        if (!resolvedPath.startsWith(basePath)) {
+            log.error("非法路径尝试: {} -> {}", componentId, resolvedPath);
             return null;
         }
-        return objectMapper.readValue(payloadJson, SingleDownloadTokenPayload.class);
+        return resolvedPath.resolve(INSTALL_FILE_NAME).normalize();
     }
 
-    // 构建组件安装包的绝对下载URL，供前端使用生成的临时Token调用下载接口进行安装
     private String buildAbsoluteDownloadUrl(String path) {
         String publicBaseUrl = componentDownloadProperties.getPublicBaseUrl();
         if (publicBaseUrl == null || publicBaseUrl.isBlank()) {
@@ -388,22 +365,18 @@ public class ComponentServiceImpl extends ServiceImpl<ComponentsMapper, Componen
         return normalizedBaseUrl + normalizedPath;
     }
 
-    // 构建组件安装包的文件名，优先使用组件名称，如果组件名称不可用则使用默认格式，确保文件名合法且具有正确的扩展名
     private String buildInstallPackageName(Components component, Integer componentId) {
         String componentName = component.getName();
         if (componentName == null || componentName.isBlank()) {
             componentName = "component-" + componentId;
         }
-
         return sanitizeFileName(componentName.trim()) + "安装包.exe";
     }
 
-    // 对文件名进行清理，替换掉可能导致文件系统问题的特殊字符，确保生成的文件名在各种操作系统上都能正常使用
     private String sanitizeFileName(String fileName) {
         return fileName.replaceAll("[\\\\/:*?\"<>|]", "_");
     }
 
-    // 生成唯一的ZIP条目名称，避免在批量下载时不同组件的安装包文件名冲突，确保每个组件的安装包在ZIP文件中都有一个唯一的条目名称
     private String uniqueZipEntryName(String fileName, Integer componentId, Set<String> usedEntryNames) {
         if (usedEntryNames.add(fileName)) {
             return fileName;
@@ -419,49 +392,98 @@ public class ComponentServiceImpl extends ServiceImpl<ComponentsMapper, Componen
             candidate = baseName + "-" + componentId + "-" + suffix + extension;
             suffix++;
         }
-
         return candidate;
     }
 
-    private record ComponentPackage(Path filePath, String entryName) {
+    private String encodeFileName(String fileName) {
+        return URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
     }
 
-    public ApiResult<?> getModuleList() {
+    private ResponseEntity<Resource> handleRangeRequest(Path filePath, long fileSize,
+                                                        String encodedFileName, String rangeHeader) throws IOException {
+        String range = rangeHeader.replace("bytes=", "");
+        String[] ranges = range.split("-");
 
-        log.info("正在获取组件列表");
+        long start = Long.parseLong(ranges[0].trim());
+        long end = (ranges.length > 1 && !ranges[1].trim().isEmpty())
+                ? Long.parseLong(ranges[1].trim())
+                : fileSize - 1;
 
-        List<Components> result = baseMapper.selectList(null);
+        if (start < 0 || end >= fileSize || start > end) {
+            return ResponseEntity.status(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                    .header(HttpHeaders.CONTENT_RANGE, "bytes */" + fileSize)
+                    .build();
+        }
 
-        return ApiResult.success(result);
+        long contentLength = end - start + 1;
+        RandomAccessFile raf = new RandomAccessFile(filePath.toFile(), "r");
+        raf.seek(start);
+
+        InputStream rangeInputStream = new InputStream() {
+            private long remaining = contentLength;
+
+            @Override
+            public int read() throws IOException {
+                if (remaining <= 0) {
+                    return -1;
+                }
+                remaining--;
+                return raf.read();
+            }
+
+            @Override
+            public int read(byte[] b, int off, int len) throws IOException {
+                if (remaining <= 0) {
+                    return -1;
+                }
+                int toRead = (int) Math.min(len, remaining);
+                int bytesRead = raf.read(b, off, toRead);
+                if (bytesRead > 0) {
+                    remaining -= bytesRead;
+                }
+                return bytesRead;
+            }
+
+            @Override
+            public void close() throws IOException {
+                raf.close();
+            }
+        };
+
+        return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentLength(contentLength)
+                .header(HttpHeaders.CONTENT_RANGE, "bytes " + start + "-" + end + "/" + fileSize)
+                .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + encodedFileName + "\"; filename*=UTF-8''" + encodedFileName)
+                .body(new InputStreamResource(rangeInputStream) {
+                    @Override
+                    public String getFilename() {
+                        return encodedFileName;
+                    }
+                });
     }
 
-    // 单组件下载临时Token的载荷类，包含用户ID和组件ID，用于存储在Redis中并在下载时验证Token的有效性和权限
-    private static class SingleDownloadTokenPayload {
-        private Integer userId;
-        private Integer componentId;
+    private record ComponentPackage(Path filePath, String entryName, Integer componentId) {
+    }
 
-        public SingleDownloadTokenPayload() {
+    private record SingleDownloadTokenPayload(Integer userId, Integer componentId) {
+    }
+
+    private record BatchStreamTokenPayload(Integer userId, List<Integer> componentIds) {
+    }
+
+    private static class ComponentDownloadException extends RuntimeException {
+        private final HttpStatus status;
+
+        private ComponentDownloadException(HttpStatus status, String message) {
+            super(message);
+            this.status = status;
         }
 
-        public SingleDownloadTokenPayload(Integer userId, Integer componentId) {
-            this.userId = userId;
-            this.componentId = componentId;
-        }
-
-        public Integer getUserId() {
-            return userId;
-        }
-
-        public void setUserId(Integer userId) {
-            this.userId = userId;
-        }
-
-        public Integer getComponentId() {
-            return componentId;
-        }
-
-        public void setComponentId(Integer componentId) {
-            this.componentId = componentId;
+        public HttpStatus getStatus() {
+            return status;
         }
     }
 }

@@ -31,6 +31,7 @@ public class RedisConstants {
 
     // 组件单文件下载的临时 Token 前缀
     public static final String COMPONENT_SINGLE_DOWNLOAD_TOKEN_PREFIX = "component:single-download:token:";
+    public static final String COMPONENT_BATCH_STREAM_TOKEN_PREFIX = "component:batch-download:stream-token:";
 
     public static final long TOKEN_TTL = 30L;
 
