@@ -49,8 +49,9 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
     private IMonitorService monitorService;
 
     private static final List<String> STAGE_TYPES = Arrays.asList("前处理", "后处理", "求解器");
-    private static final List<String> PREPROCESSING_SOLVER_TYPES = Arrays.asList("多体", "结构", "冲击");
+    private static final List<String> PREPROCESSING_TYPES = Arrays.asList("多体", "结构", "冲击");
     private static final List<String> POSTPROCESSING_TYPES = List.of("通用后处理", "多体");
+    private static final List<String> SOLVER_TYPES = List.of("多体", "结构", "冲击", "流固弱耦合");
     private static final String STATUS_PENDING = "pending";
     private static final int DEFAULT_PRIORITY = 2;
     private static final int DEFAULT_CPU_CORE_NEED = 1;
@@ -322,9 +323,17 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
             if (!POSTPROCESSING_TYPES.contains(createDTO.getType())) {
                 return ApiResult.failed("后处理阶段任务类型只能为：通用后处理/多体");
             }
-        } else if ("前处理".equals(createDTO.getSimulationStage()) || "求解器".equals(createDTO.getSimulationStage())) {
-            if (!PREPROCESSING_SOLVER_TYPES.contains(createDTO.getType())) {
-                return ApiResult.failed("前处理/求解器阶段任务类型只能为：多体、结构、冲击");
+        }
+
+        if ("前处理".equals(createDTO.getSimulationStage())) {
+            if (!PREPROCESSING_TYPES.contains(createDTO.getType())) {
+                return ApiResult.failed("前处理阶段任务类型只能为：多体、结构、冲击");
+            }
+        }
+
+        if ("求解器".equals(createDTO.getSimulationStage())) {
+            if (!SOLVER_TYPES.contains(createDTO.getType())) {
+                return ApiResult.failed("求解器阶段任务类型只能为：多体、结构、冲击、流固弱耦合");
             }
         }
 
