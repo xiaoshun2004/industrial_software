@@ -27,8 +27,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * <p>
@@ -40,6 +43,14 @@ import java.util.Map;
  */
 @Service
 public class ModProjectsServiceImpl extends ServiceImpl<ModProjectsMapper, ModProjects> implements IModProjectsService {
+
+    private static final String INVALID_SIMULATION_TYPE_MESSAGE = "仿真类型不正确，应为：结构动力学、冲击动力学、多体动力学";
+
+    private static final Set<String> VALID_SIMULATION_TYPES = new HashSet<>(Arrays.asList(
+            "结构动力学",
+            "冲击动力学",
+            "多体动力学"
+    ));
 
     @Autowired
     private ModTasksMapper modTasksMapper;
@@ -119,6 +130,11 @@ public class ModProjectsServiceImpl extends ServiceImpl<ModProjectsMapper, ModPr
             return ApiResult.failed("项目名称不能为空");
         }
 
+        String simulationType = validateSimulationType(createDTO.getSimulationType());
+        if (simulationType == null) {
+            return ApiResult.failed(INVALID_SIMULATION_TYPE_MESSAGE);
+        }
+
         UserDTO currentUser = UserHolder.getUser();
         if (currentUser == null || currentUser.getId() == null) {
             return ApiResult.failed("用户未登录");
@@ -137,6 +153,7 @@ public class ModProjectsServiceImpl extends ServiceImpl<ModProjectsMapper, ModPr
         ModProjects project = new ModProjects();
         project.setProjectName(createDTO.getProjectName());
         project.setCreator(user.getUserId());
+        project.setSimulationType(simulationType);
         project.setOrganizationId(organizationId);
         project.setCreationTime(LocalDateTime.now());
         project.setProjectStatus(0); // 0表示共享项目
@@ -155,6 +172,11 @@ public class ModProjectsServiceImpl extends ServiceImpl<ModProjectsMapper, ModPr
             return ApiResult.failed("项目名称不能为空");
         }
 
+        String simulationType = validateSimulationType(createDTO.getSimulationType());
+        if (simulationType == null) {
+            return ApiResult.failed(INVALID_SIMULATION_TYPE_MESSAGE);
+        }
+
         UserDTO currentUser = UserHolder.getUser();
         if (currentUser == null || currentUser.getId() == null) {
             return ApiResult.failed("用户未登录");
@@ -168,6 +190,7 @@ public class ModProjectsServiceImpl extends ServiceImpl<ModProjectsMapper, ModPr
         ModProjects project = new ModProjects();
         project.setProjectName(createDTO.getProjectName());
         project.setCreator(user.getUserId());
+        project.setSimulationType(simulationType);
         project.setOrganizationId(null);
         project.setCreationTime(LocalDateTime.now());
         project.setProjectStatus(1); // 1表示私人项目
@@ -257,6 +280,13 @@ public class ModProjectsServiceImpl extends ServiceImpl<ModProjectsMapper, ModPr
         userOrgWrapper.eq(UserOrganization::getUserId, userId);
         UserOrganization userOrganization = userOrganizationMapper.selectOne(userOrgWrapper);
         return userOrganization == null ? null : userOrganization.getOrgId();
+    }
+
+    private String validateSimulationType(String simulationType) {
+        if (!StringUtils.hasText(simulationType)) {
+            return null;
+        }
+        return VALID_SIMULATION_TYPES.contains(simulationType) ? simulationType : null;
     }
 
     private ApiResult<ModProjects> validateProjectManageAccess(Integer projectId) {

@@ -31,6 +31,12 @@ public class ModProjects implements Serializable {
 
     private Integer creator;
 
+    /**
+     * 仿真类型
+     */
+    @TableField("simulation_type")
+    private String simulationType;
+
     private LocalDateTime creationTime;
     
     /**

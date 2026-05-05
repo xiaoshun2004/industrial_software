@@ -294,6 +294,7 @@ class OrganizationServiceIntegrationTest {
                     project_id INT PRIMARY KEY,
                     project_name VARCHAR(255),
                     creator INT NOT NULL,
+                    simulation_type VARCHAR(32),
                     creation_time TIMESTAMP NOT NULL,
                     organization_id INT,
                     project_status INT

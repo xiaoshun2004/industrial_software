@@ -391,6 +391,7 @@ CREATE TABLE `mod_projects` (
   `project_id` int NOT NULL AUTO_INCREMENT,
   `project_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `creator` int NOT NULL,
+  `simulation_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '仿真类型：结构动力学、冲击动力学、多体动力学',
   `creation_time` datetime NOT NULL,
   `organization_id` int DEFAULT NULL,
   `project_status` int DEFAULT '0' COMMENT '项目状态：0-共享项目，1-私人项目',
@@ -410,7 +411,7 @@ CREATE TABLE `mod_projects` (
 
 LOCK TABLES `mod_projects` WRITE;
 /*!40000 ALTER TABLE `mod_projects` DISABLE KEYS */;
-INSERT INTO `mod_projects` VALUES (1,'test1',20,'2026-03-15 02:52:44',NULL,1);
+INSERT INTO `mod_projects` VALUES (1,'test1',20,NULL,'2026-03-15 02:52:44',NULL,1);
 /*!40000 ALTER TABLE `mod_projects` ENABLE KEYS */;
 UNLOCK TABLES;
 

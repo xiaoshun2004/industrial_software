@@ -1,9 +1,10 @@
 package com.scut.industrial_software.mapper;
 
-import com.scut.industrial_software.model.entity.ModProjects;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.scut.industrial_software.model.entity.ModProjects;
+import org.apache.ibatis.annotations.MapKey;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.Map;
@@ -26,8 +27,13 @@ public interface ModProjectsMapper extends BaseMapper<ModProjects> {
      * @param userOrgId 用户所属组织ID (null表示显示无组织的项目)
      * @return 分页结果
      */
-    IPage<Map<String, Object>> selectSharedProjectsByPage(Page<Map<String, Object>> page, @Param("keyword") String keyword, @Param("userOrgId") Integer userOrgId);
-    
+    @MapKey("projectId")
+    IPage<Map<String, Object>> selectSharedProjectsByPage(
+            Page<Map<String, Object>> page,
+            @Param("keyword") String keyword,
+            @Param("userOrgId") Integer userOrgId
+    );
+
     /**
      * 分页查询私人项目
      * 
@@ -36,7 +42,12 @@ public interface ModProjectsMapper extends BaseMapper<ModProjects> {
      * @param creator 创建者
      * @return 分页结果
      */
-    IPage<Map<String, Object>> selectPrivateProjectsByPage(Page<Map<String, Object>> page, @Param("keyword") String keyword, @Param("creator") Integer creator);
+    @MapKey("projectId")
+    IPage<Map<String, Object>> selectPrivateProjectsByPage(
+            Page<Map<String, Object>> page,
+            @Param("keyword") String keyword,
+            @Param("creator") Integer creator
+    );
 
     /**
      * 分页查询当前用户可访问项目
@@ -47,8 +58,11 @@ public interface ModProjectsMapper extends BaseMapper<ModProjects> {
      * @param userId 当前用户ID
      * @return 分页结果
      */
-    IPage<Map<String, Object>> selectAccessibleProjectsByPage(Page<Map<String, Object>> page,
-                                                              @Param("keyword") String keyword,
-                                                              @Param("userOrgId") Integer userOrgId,
-                                                              @Param("userId") Integer userId);
+    @MapKey("projectId")
+    IPage<Map<String, Object>> selectAccessibleProjectsByPage(
+            Page<Map<String, Object>> page,
+            @Param("keyword") String keyword,
+            @Param("userOrgId") Integer userOrgId,
+            @Param("userId") Integer userId
+    );
 }
