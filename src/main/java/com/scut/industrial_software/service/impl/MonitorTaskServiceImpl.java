@@ -5,10 +5,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.mapper.ModTasksMapper;
+import com.scut.industrial_software.model.constant.TaskStatusConstants;
 import com.scut.industrial_software.model.dto.MonitorTasksPageRequestDTO;
 import com.scut.industrial_software.model.dto.TaskRuntimeSnapshotDTO;
 import com.scut.industrial_software.model.entity.ModTasks;
 import com.scut.industrial_software.model.vo.MonitorTaskItemVO;
+import com.scut.industrial_software.model.vo.TaskSummaryVO;
 import com.scut.industrial_software.service.IMonitorService;
 import com.scut.industrial_software.service.IMonitorTaskService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +26,13 @@ import java.util.stream.Collectors;
 @Service
 public class MonitorTaskServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> implements IMonitorTaskService {
 
-    private static final Set<String> ALLOWED_STATUS = Set.of("pending", "running", "completed", "failed", "未启动", "仿真中", "已结束");
+    private static final Set<String> ALLOWED_STATUS = Set.of(
+            TaskStatusConstants.PENDING,
+            TaskStatusConstants.RUNNING,
+            TaskStatusConstants.COMPLETED,
+            TaskStatusConstants.FAILED,
+            TaskStatusConstants.STOPPED
+    );
 
     @Autowired
     private IMonitorService monitorService;
@@ -47,7 +55,7 @@ public class MonitorTaskServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks
         List<MonitorTaskItemVO> items = taskPage.getRecords().stream().map(task -> {
             MonitorTaskItemVO vo = MonitorTaskItemVO.from(task);
             // 如果任务的状态是running，正在运行的则先返回它的执行进度快照，后续如果升级为Websocket全双工协议可以实现实时更新
-            if ("running".equals(task.getStatus()) || "仿真中".equals(task.getStatus())) {
+            if (TaskStatusConstants.RUNNING.equals(task.getStatus())) {
                 TaskRuntimeSnapshotDTO runtimeSnapshot = monitorService.getRuntimeSnapshot("task_" + task.getTaskId());
                 if (runtimeSnapshot != null) {
                     vo.setStatus(runtimeSnapshot.getStatus());
@@ -85,6 +93,58 @@ public class MonitorTaskServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks
             return ApiResult.success("优先级修改成功");
         }
         return ApiResult.failed("仅 pending 状态任务允许修改优先级");
+    }
+
+    @Override
+    public ApiResult<?> getTaskSummary() {
+        TaskSummaryVO summaryVO = new TaskSummaryVO();
+        List<Map<String, Object>> rows = baseMapper.countTasksByStatus();
+        if (rows == null || rows.isEmpty()) {
+            return ApiResult.success(summaryVO);
+        }
+
+        for (Map<String, Object> row : rows) {
+            if (row == null) {
+                continue;
+            }
+            Object statusValue = row.get("STATUS");
+            if (statusValue == null) {
+                statusValue = row.get("status");
+            }
+            Object countValue = row.get("COUNT");
+            if (countValue == null) {
+                countValue = row.get("count");
+            }
+            String status = statusValue == null ? null : statusValue.toString();
+            long count = toLong(countValue);
+            if (TaskStatusConstants.PENDING.equals(status)) {
+                summaryVO.setPendingCount(count);
+            } else if (TaskStatusConstants.RUNNING.equals(status)) {
+                summaryVO.setRunningCount(count);
+            } else if (TaskStatusConstants.COMPLETED.equals(status)) {
+                summaryVO.setCompletedCount(count);
+            } else if (TaskStatusConstants.FAILED.equals(status)) {
+                summaryVO.setFailedCount(count);
+            } else if (TaskStatusConstants.STOPPED.equals(status)) {
+                summaryVO.setStoppedCount(count);
+            }
+        }
+
+        return ApiResult.success(summaryVO);
+    }
+
+    private long toLong(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value == null) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(value.toString());
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
     }
 
     private Integer parseTaskId(String taskId) {

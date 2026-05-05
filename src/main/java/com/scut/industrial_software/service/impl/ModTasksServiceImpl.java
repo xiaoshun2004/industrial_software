@@ -8,6 +8,7 @@ import com.scut.industrial_software.common.exception.ApiException;
 import com.scut.industrial_software.common.api.ApiErrorCode;
 import com.scut.industrial_software.model.dto.PageRequestDTO;
 import com.scut.industrial_software.model.dto.TaskCreateDTO;
+import com.scut.industrial_software.model.constant.TaskStatusConstants;
 import com.scut.industrial_software.model.entity.ModProjects;
 import com.scut.industrial_software.model.entity.ModTasks;
 import com.scut.industrial_software.model.entity.ModUsers;
@@ -51,7 +52,6 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
     private static final List<String> STAGE_TYPES = Arrays.asList("前处理", "后处理", "求解器");
     private static final List<String> PREPROCESSING_SOLVER_TYPES = Arrays.asList("多体", "结构", "冲击");
     private static final List<String> POSTPROCESSING_TYPES = List.of("通用后处理", "多体");
-    private static final String STATUS_PENDING = "pending";
     private static final int DEFAULT_PRIORITY = 2;
     private static final int DEFAULT_CPU_CORE_NEED = 1;
     private static final int DEFAULT_MEMORY_NEED = 4;
@@ -137,8 +137,8 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         task.setProjectId(projectId);
         task.setSimulationStage(createDTO.getSimulationStage());
         task.setType(createDTO.getType());
-        task.setStatus(STATUS_PENDING);
-        task.setPriority(DEFAULT_PRIORITY);
+        task.setStatus(TaskStatusConstants.PENDING);
+        task.setPriority(resolveTaskPriority(createDTO));
         task.setCpuCoreNeed(DEFAULT_CPU_CORE_NEED);
         task.setMemoryNeed(DEFAULT_MEMORY_NEED);
         task.setProgress(0);
@@ -151,6 +151,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         }
 
         ModTasksVO modTasksVO = toTaskVOWithDisplayStatus(task);
+        monitorService.dispatchPendingTasks();
 
         return ApiResult.success(modTasksVO, "任务创建成功");
     }
@@ -184,8 +185,8 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         task.setProjectId(projectId);
         task.setSimulationStage(createDTO.getSimulationStage());
         task.setType(createDTO.getType());
-        task.setStatus(STATUS_PENDING);
-        task.setPriority(DEFAULT_PRIORITY);
+        task.setStatus(TaskStatusConstants.PENDING);
+        task.setPriority(resolveTaskPriority(createDTO));
         task.setCpuCoreNeed(DEFAULT_CPU_CORE_NEED);
         task.setMemoryNeed(DEFAULT_MEMORY_NEED);
         task.setProgress(0);
@@ -198,6 +199,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         }
 
         ModTasksVO modTasksVO = toTaskVOWithDisplayStatus(task);
+        monitorService.dispatchPendingTasks();
 
         return ApiResult.success(modTasksVO, "任务创建成功");
 
@@ -235,7 +237,8 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
 
     @Override
     public ApiResult<?> startTask(String taskId) {
-        return monitorService.startProgram(taskId);
+        monitorService.dispatchPendingTasks();
+        return monitorService.getProgramStatus(taskId);
     }
 
     @Override
@@ -258,7 +261,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
     }
 
     /**
-     * 任务状态转换：pending->未启动，running->仿真中，completed/failed->已结束
+     * 任务状态转换：pending->未启动，running->仿真中，completed->已完成，failed->已失败，stopped->已停止
      */
     private String convertTaskStatus(String status) {
         if (!StringUtils.hasText(status)) {
@@ -267,7 +270,9 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         return switch (status.toLowerCase()) {
             case "pending" -> "未启动";
             case "running" -> "仿真中";
-            case "completed", "failed" -> "已结束";
+            case "completed" -> "已完成";
+            case "failed" -> "已失败";
+            case "stopped" -> "已停止";
             default -> status;
         };
     }
@@ -328,6 +333,14 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
             }
         }
 
+        if (createDTO.getPriority() != null && (createDTO.getPriority() < 1 || createDTO.getPriority() > 3)) {
+            return ApiResult.failed("priority 仅支持 1|2|3");
+        }
+
         return null;
+    }
+
+    private Integer resolveTaskPriority(TaskCreateDTO createDTO) {
+        return createDTO.getPriority() == null ? DEFAULT_PRIORITY : createDTO.getPriority();
     }
 }

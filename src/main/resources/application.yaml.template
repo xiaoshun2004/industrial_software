@@ -119,10 +119,17 @@ component:
 monitor:
   program:
     # 求解器/监控程序可执行文件路径（请替换为部署环境中的真实路径）
-    path: D:/exe/GETexe4/dist/main/main.exe
+    path: D:/exe/GETexe4/dist/main.exe
   maxParallel:
     # 默认并行任务上限（任务类型未单独配置并发度时生效）
     default: 2
+  scheduler:
+    # 本机任务调度和进程监控轮询间隔
+    fixed-delay-ms: 5000
+  local-server:
+    # 单服务器模式下用于兼容任务展示的本机标识
+    id: 1
+    name: local-server
 
 # 阿里云 ECS 配置（按需启用）
 aliyun:

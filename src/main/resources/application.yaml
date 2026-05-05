@@ -108,6 +108,22 @@ component:
     batch-root: D:/resources/tmp/component-batch
     public-base-url: http://localhost:8081
 
+# 任务监控模块配置
+monitor:
+  program:
+    # 求解器/监控程序可执行文件路径（请替换为部署环境中的真实路径）
+    path: D:/exe/GETexe4/dist/main.exe
+  maxParallel:
+    # 默认并行任务上限（任务类型未单独配置并发度时生效）
+    default: 2
+  scheduler:
+    # 本机任务调度和进程监控轮询间隔
+    fixed-delay-ms: 5000
+  local-server:
+    # 单服务器模式下用于兼容任务展示的本机标识
+    id: 1
+    name: local-server
+
 # 阿里云配置(生产环境不要把密钥放在这里，放在环境变量中，或者放入Nacos/Apollo配置中心中)
 aliyun:
   ecs:

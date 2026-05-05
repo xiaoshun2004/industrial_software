@@ -11,4 +11,6 @@ public interface IMonitorTaskService extends IService<ModTasks> {
     ApiResult<?> getTasksPage(MonitorTasksPageRequestDTO requestDTO);
 
     ApiResult<?> updateTaskPriority(String taskId, Integer priority);
+
+    ApiResult<?> getTaskSummary();
 }

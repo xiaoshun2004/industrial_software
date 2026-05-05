@@ -6,6 +6,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * <p>
  *  Mapper 接口
@@ -63,8 +66,46 @@ public interface ModTasksMapper extends BaseMapper<ModTasks> {
     Integer countRunningByType(@Param("type") String type);
 
     /**
+     * 查询当前运行中的任务数量，单服务器调度使用全局并发上限。
+     */
+    Integer countRunningTasks();
+
+    /**
      * 按优先级和创建时间查询待调度任务
      */
-    IPage<ModTasks> selectPendingTasksForSchedule(Page<ModTasks> page,
-                                                  @Param("type") String type);
+    IPage<ModTasks> selectPendingTasksForSchedule(Page<ModTasks> page);
+
+    /**
+     * 将任务从 pending 标记为 running。
+     */
+    int markTaskRunning(@Param("taskId") Integer taskId,
+                        @Param("serverId") Integer serverId,
+                        @Param("serverName") String serverName);
+
+    /**
+     * 将 running 任务标记为 completed。
+     */
+    int markTaskCompleted(@Param("taskId") Integer taskId);
+
+    /**
+     * 将 running 任务标记为 failed。
+     */
+    int markTaskFailed(@Param("taskId") Integer taskId,
+                       @Param("errorMsg") String errorMsg);
+
+    /**
+     * 将 running 任务标记为 stopped。
+     */
+    int markTaskStopped(@Param("taskId") Integer taskId,
+                        @Param("errorMsg") String errorMsg);
+
+    /**
+     * 按状态聚合任务数量。
+     */
+    List<Map<String, Object>> countTasksByStatus();
+
+    /**
+     * 服务启动恢复时，将遗留 running 任务标记为 failed。
+     */
+    int failRunningTasksOnStartup(@Param("errorMsg") String errorMsg);
 }

@@ -35,8 +35,9 @@ public class MonitorTaskController {
         return taskService.updateTaskPriority(taskId, priority);
     }
 
-    @PostMapping("/allocate")
-    public ApiResult<?> allocateResources(){
-        return ApiResult.success();
+    @GetMapping("/summary")
+    public ApiResult<?> getTaskSummary() {
+        log.info("获取本机任务状态统计");
+        return taskService.getTaskSummary();
     }
 }

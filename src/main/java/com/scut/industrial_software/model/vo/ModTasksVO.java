@@ -20,6 +20,8 @@ public class ModTasksVO {
 
     private String computerResource;
 
+    private Integer priority;
+
     private LocalDateTime creation_time;
 
     private String status;
@@ -31,6 +33,7 @@ public class ModTasksVO {
         this.simulationStage = modTasks.getSimulationStage();
         this.type = modTasks.getType();
         this.computerResource = modTasks.getComputeResource();
+        this.priority = modTasks.getPriority();
         this.creation_time = modTasks.getCreationTime();
         this.status = modTasks.getStatus();
     }

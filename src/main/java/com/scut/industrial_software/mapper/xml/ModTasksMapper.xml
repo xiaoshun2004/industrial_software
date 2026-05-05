@@ -133,6 +133,12 @@
           AND t.status IN ('running', '仿真中')
     </select>
 
+    <select id="countRunningTasks" resultType="java.lang.Integer">
+        SELECT COUNT(1)
+        FROM mod_tasks t
+        WHERE t.status = 'running'
+    </select>
+
     <select id="selectPendingTasksForSchedule" resultType="com.scut.industrial_software.model.entity.ModTasks">
         SELECT
             t.task_id,
@@ -156,13 +162,62 @@
             u.username AS creator
         FROM mod_tasks t
         LEFT JOIN mod_users u ON t.creator = u.user_id
-        <where>
-            t.status IN ('pending', '未启动')
-            <if test="type != null and type != ''">
-                AND t.`type` = #{type}
-            </if>
-        </where>
+        WHERE t.status = 'pending'
         ORDER BY IFNULL(t.priority, 2) ASC, t.creation_time ASC
     </select>
+
+    <update id="markTaskRunning">
+        UPDATE mod_tasks
+        SET status = 'running',
+            server_id = #{serverId},
+            server_name = #{serverName},
+            start_time = NOW(),
+            progress = 0,
+            error_msg = NULL
+        WHERE task_id = #{taskId}
+          AND status = 'pending'
+    </update>
+
+    <update id="markTaskCompleted">
+        UPDATE mod_tasks
+        SET status = 'completed',
+            progress = 100,
+            end_time = NOW(),
+            error_msg = NULL
+        WHERE task_id = #{taskId}
+          AND status = 'running'
+    </update>
+
+    <update id="markTaskFailed">
+        UPDATE mod_tasks
+        SET status = 'failed',
+            end_time = NOW(),
+            error_msg = #{errorMsg}
+        WHERE task_id = #{taskId}
+          AND status = 'running'
+    </update>
+
+    <update id="markTaskStopped">
+        UPDATE mod_tasks
+        SET status = 'stopped',
+            end_time = NOW(),
+            error_msg = #{errorMsg}
+        WHERE task_id = #{taskId}
+          AND status = 'running'
+    </update>
+
+    <select id="countTasksByStatus" resultType="java.util.Map">
+        SELECT status, COUNT(1) AS count
+        FROM mod_tasks
+        GROUP BY status
+    </select>
+
+    <update id="failRunningTasksOnStartup">
+        UPDATE mod_tasks
+        SET status = 'failed',
+            end_time = NOW(),
+            error_msg = #{errorMsg}
+        WHERE status = 'running'
+    </update>
 
 </mapper>

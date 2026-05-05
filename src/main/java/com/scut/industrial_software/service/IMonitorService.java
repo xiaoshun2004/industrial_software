@@ -18,6 +18,10 @@ public interface IMonitorService {
 
     ApiResult<MonitorVO> startProgram(String taskId);
 
+    boolean dispatchPendingTasks();
+
+    void recoverRunningTasksOnStartup();
+
     void scheduledMonitor();
 
     ApiResult<MonitorVO> stopProgram(String taskId);
