@@ -19,6 +19,7 @@ import com.scut.industrial_software.service.IModUsersService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.scut.industrial_software.service.IMonitorService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -47,6 +48,12 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
 
     @Autowired
     private IMonitorService monitorService;
+
+    @Value("${monitor.local-server.id:1}")
+    private Integer localServerId;
+
+    @Value("${monitor.local-server.name:local-server}")
+    private String localServerName;
 
     private static final List<String> STAGE_TYPES = Arrays.asList("前处理", "后处理", "求解器");
     private static final List<String> PREPROCESSING_TYPES = Arrays.asList("多体", "结构", "冲击");
@@ -139,7 +146,8 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         task.setSimulationStage(createDTO.getSimulationStage());
         task.setType(createDTO.getType());
         task.setStatus(STATUS_PENDING);
-        task.setPriority(DEFAULT_PRIORITY);
+        task.setExecutionMode(null);
+        task.setPriority(createDTO.getPriority() == null ? DEFAULT_PRIORITY : createDTO.getPriority());
         task.setCpuCoreNeed(DEFAULT_CPU_CORE_NEED);
         task.setMemoryNeed(DEFAULT_MEMORY_NEED);
         task.setProgress(0);
@@ -186,7 +194,8 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         task.setSimulationStage(createDTO.getSimulationStage());
         task.setType(createDTO.getType());
         task.setStatus(STATUS_PENDING);
-        task.setPriority(DEFAULT_PRIORITY);
+        task.setExecutionMode(null);
+        task.setPriority(createDTO.getPriority() == null ? DEFAULT_PRIORITY : createDTO.getPriority());
         task.setCpuCoreNeed(DEFAULT_CPU_CORE_NEED);
         task.setMemoryNeed(DEFAULT_MEMORY_NEED);
         task.setProgress(0);
@@ -235,8 +244,24 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
     }
 
     @Override
-    public ApiResult<?> startTask(String taskId) {
-        return monitorService.startProgram(taskId);
+    public ApiResult<?> startRemoteTask(String taskId) {
+        Integer taskIdInt = parseTaskId(taskId);
+        if (taskIdInt == null) {
+            return ApiResult.failed("任务ID格式不正确");
+        }
+
+        ModTasks task = this.getById(taskIdInt);
+        if (task == null) {
+            throw new ApiException(ApiErrorCode.RESOURCE_NOT_FOUND);
+        }
+
+        int updated = baseMapper.markTaskRemotePending(taskIdInt, localServerId, localServerName);
+        if (updated <= 0) {
+            return ApiResult.failed("仅 pending 且未选择其他执行模式的任务允许远程启动");
+        }
+
+        monitorService.dispatchPendingTasks();
+        return monitorService.getProgramStatus(taskId);
     }
 
     @Override
@@ -286,6 +311,14 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         return user != null ? user.getUserId() : null;
     }
 
+    private Integer parseTaskId(String taskId) {
+        try {
+            return taskId != null && taskId.startsWith("task_") ? Integer.parseInt(taskId.substring(5)) : Integer.parseInt(taskId);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
     /**
      * 校验任务参数
      *
@@ -300,6 +333,10 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         // 校验创建者用户名
         if (!StringUtils.hasText(createDTO.getCreator())) {
             return ApiResult.failed("创建者不能为空");
+        }
+
+        if (createDTO.getPriority() != null && (createDTO.getPriority() < 1 || createDTO.getPriority() > 3)) {
+            return ApiResult.failed("priority 仅支持 1|2|3");
         }
 
         // 校验用户是否存在
