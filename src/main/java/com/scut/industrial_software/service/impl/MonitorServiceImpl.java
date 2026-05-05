@@ -62,7 +62,6 @@ public class MonitorServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> im
     /**
      * 兼容旧启动接口：用户请求只触发一次调度扫描，不直接启动指定任务。
      */
-    @Override
     public ApiResult<MonitorVO> startProgram(String taskId) {
         Integer taskIdInt = parseTaskId(taskId);
         if (taskIdInt == null) {

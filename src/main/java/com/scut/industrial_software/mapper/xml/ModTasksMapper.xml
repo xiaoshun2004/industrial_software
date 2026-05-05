@@ -14,6 +14,7 @@
             t.type,
             t.compute_resource,
             t.status,
+            t.execution_mode,
             t.server_id,
             t.server_name,
             t.priority,
@@ -49,6 +50,7 @@
             t.type,
             t.status,
             t.compute_resource,
+            t.execution_mode,
             t.server_id,
             t.server_name,
             t.priority,
@@ -83,6 +85,7 @@
             t.type,
             t.status,
             t.compute_resource,
+            t.execution_mode,
             t.server_id,
             t.server_name,
             t.priority,
@@ -150,6 +153,7 @@
             t.type,
             t.status,
             t.compute_resource,
+            t.execution_mode,
             t.server_id,
             t.server_name,
             t.priority,
@@ -163,12 +167,26 @@
         FROM mod_tasks t
         LEFT JOIN mod_users u ON t.creator = u.user_id
         WHERE t.status = 'pending'
-        ORDER BY IFNULL(t.priority, 2) ASC, t.creation_time ASC
+          AND t.execution_mode = 'remote'
+        ORDER BY t.priority ASC, t.creation_time ASC
     </select>
+
+    <update id="markTaskRemotePending">
+        UPDATE mod_tasks
+        SET execution_mode = 'remote',
+            server_id = #{serverId},
+            server_name = #{serverName},
+            progress = 0,
+            error_msg = NULL
+        WHERE task_id = #{taskId}
+          AND status = 'pending'
+          AND (execution_mode IS NULL OR execution_mode = '' OR execution_mode = 'remote')
+    </update>
 
     <update id="markTaskRunning">
         UPDATE mod_tasks
         SET status = 'running',
+            execution_mode = 'remote',
             server_id = #{serverId},
             server_name = #{serverName},
             start_time = NOW(),
@@ -176,6 +194,7 @@
             error_msg = NULL
         WHERE task_id = #{taskId}
           AND status = 'pending'
+          AND execution_mode = 'remote'
     </update>
 
     <update id="markTaskCompleted">

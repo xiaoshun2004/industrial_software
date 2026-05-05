@@ -29,6 +29,8 @@ public class MonitorTaskItemVO {
 
     private String status;
 
+    private String executionMode;
+
     private Integer progress;
 
     private LocalDateTime startTime;
@@ -46,6 +48,7 @@ public class MonitorTaskItemVO {
         vo.setCpuCoreNeed(task.getCpuCoreNeed());
         vo.setMemoryNeed(task.getMemoryNeed());
         vo.setStatus(task.getStatus());
+        vo.setExecutionMode(task.getExecutionMode());
         vo.setProgress(task.getProgress());
         vo.setStartTime(task.getStartTime());
         vo.setErrorMsg(task.getErrorMsg());

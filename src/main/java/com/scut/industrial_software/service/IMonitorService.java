@@ -16,8 +16,6 @@ import java.util.Map;
  */
 public interface IMonitorService {
 
-    ApiResult<MonitorVO> startProgram(String taskId);
-
     boolean dispatchPendingTasks();
 
     void recoverRunningTasksOnStartup();

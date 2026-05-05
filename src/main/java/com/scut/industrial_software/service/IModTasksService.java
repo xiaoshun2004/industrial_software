@@ -60,7 +60,7 @@ public interface IModTasksService extends IService<ModTasks> {
      */
     ApiResult<?> deleteTask(String taskId);
 
-    ApiResult<?> startTask(String taskId);
+    ApiResult<?> startRemoteTask(String taskId);
 
     ApiResult<?> getTaskStatus(String taskId);
 

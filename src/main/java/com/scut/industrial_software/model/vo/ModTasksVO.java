@@ -22,6 +22,8 @@ public class ModTasksVO {
 
     private Integer priority;
 
+    private String executionMode;
+
     private LocalDateTime creation_time;
 
     private String status;
@@ -34,6 +36,7 @@ public class ModTasksVO {
         this.type = modTasks.getType();
         this.computerResource = modTasks.getComputeResource();
         this.priority = modTasks.getPriority();
+        this.executionMode = modTasks.getExecutionMode();
         this.creation_time = modTasks.getCreationTime();
         this.status = modTasks.getStatus();
     }

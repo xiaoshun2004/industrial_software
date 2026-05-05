@@ -75,6 +75,10 @@ public interface ModTasksMapper extends BaseMapper<ModTasks> {
      */
     IPage<ModTasks> selectPendingTasksForSchedule(Page<ModTasks> page);
 
+    int markTaskRemotePending(@Param("taskId") Integer taskId,
+                              @Param("serverId") Integer serverId,
+                              @Param("serverName") String serverName);
+
     /**
      * 将任务从 pending 标记为 running。
      */

@@ -58,9 +58,9 @@ public class ModTasksController {
     /**
      * 开始任务
      */
-    @PutMapping("/start/{taskId}")
-    public ApiResult<?> startTask(@PathVariable String taskId) {
-        return modTasksService.startTask(taskId);
+    @PutMapping("/start/remote/{taskId}")
+    public ApiResult<?> startRemoteTask(@PathVariable String taskId) {
+        return modTasksService.startRemoteTask(taskId);
     }
 
     /**
