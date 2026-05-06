@@ -55,6 +55,12 @@ public class MonitorServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> im
 
     private final AtomicBoolean dispatching = new AtomicBoolean(false);
 
+    private volatile long nextIdleDispatchAtMillis = 0L;
+
+    private volatile long idleDispatchBackoffSeconds = 1L;
+
+    private static final long MAX_IDLE_DISPATCH_BACKOFF_SECONDS = 30L;
+
     public MonitorServiceImpl(@Qualifier("taskExecutor") Executor taskExecutor) {
         this.taskExecutor = taskExecutor;
     }
@@ -108,6 +114,9 @@ public class MonitorServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> im
                     launched = true;
                 }
             }
+            if (launched) {
+                resetIdleDispatchBackoff();
+            }
             return launched;
         } catch (Exception e) {
             logger.error("调度 pending 任务失败", e);
@@ -145,19 +154,21 @@ public class MonitorServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> im
         }
 
         Integer taskIdInt = task.getTaskId();
-        int updated = baseMapper.markTaskRunning(taskIdInt, localServerId, localServerName);
+        Integer serverId = task.getServerId() == null ? localServerId : task.getServerId();
+        String serverName = StringUtils.hasText(task.getServerName()) ? task.getServerName() : localServerName;
+        int updated = baseMapper.markTaskRunning(taskIdInt, serverId, serverName);
         if (updated <= 0) {
             return false;
         }
 
-        launchProgramAsync(normalizeTaskKey(taskIdInt), taskIdInt);
+        launchProgramAsync(normalizeTaskKey(taskIdInt), taskIdInt, serverId, serverName);
         return true;
     }
 
     /**
      *  启动异步线程执行任务
      */
-    private void launchProgramAsync(String taskId, Integer taskIdInt) {
+    private void launchProgramAsync(String taskId, Integer taskIdInt, Integer serverId, String serverName) {
         CompletableFuture.runAsync(() -> {
             Process process = null;
             try {
@@ -171,8 +182,8 @@ public class MonitorServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> im
                 ProcessInfoDTO processInfo = new ProcessInfoDTO(process, process.pid(), LocalDateTime.now());
                 processInfo.setStatus(TaskStatusConstants.RUNNING);
                 processInfo.setProgress(0);
-                processInfo.setServerId(localServerId);
-                processInfo.setServerName(localServerName);
+                processInfo.setServerId(serverId);
+                processInfo.setServerName(serverName);
                 processMap.put(taskId, processInfo);
 
                 int exitCode = process.waitFor();
@@ -300,7 +311,32 @@ public class MonitorServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> im
     @Scheduled(fixedDelayString = "${monitor.scheduler.fixed-delay-ms:1000}")
     public void scheduledMonitor() {
         monitorRunningProcesses();
-        dispatchPendingTasks();
+        if (!processMap.isEmpty()) {
+            resetIdleDispatchBackoff();
+            dispatchPendingTasks();
+            return;
+        }
+
+        long now = System.currentTimeMillis();
+        if (now < nextIdleDispatchAtMillis) {
+            return;
+        }
+
+        boolean launched = dispatchPendingTasks();
+        if (!launched) {
+            scheduleNextIdleDispatch(now);
+        }
+    }
+
+    private void scheduleNextIdleDispatch(long nowMillis) {
+        long delaySeconds = Math.max(1L, idleDispatchBackoffSeconds);
+        nextIdleDispatchAtMillis = nowMillis + delaySeconds * 1000L;
+        idleDispatchBackoffSeconds = Math.min(delaySeconds * 2L, MAX_IDLE_DISPATCH_BACKOFF_SECONDS);
+    }
+
+    private void resetIdleDispatchBackoff() {
+        nextIdleDispatchAtMillis = 0L;
+        idleDispatchBackoffSeconds = 1L;
     }
 
     /**

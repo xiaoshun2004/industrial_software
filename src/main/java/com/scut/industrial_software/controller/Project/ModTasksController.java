@@ -2,6 +2,7 @@ package com.scut.industrial_software.controller.Project;
 
 import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.model.dto.PageRequestDTO;
+import com.scut.industrial_software.model.dto.RemoteTaskStartDTO;
 import com.scut.industrial_software.model.dto.TaskCreateDTO;
 import com.scut.industrial_software.service.IModTasksService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,8 +60,9 @@ public class ModTasksController {
      * 开始任务
      */
     @PutMapping("/start/remote/{taskId}")
-    public ApiResult<?> startRemoteTask(@PathVariable String taskId) {
-        return modTasksService.startRemoteTask(taskId);
+    public ApiResult<?> startRemoteTask(@PathVariable String taskId,
+                                        @RequestBody RemoteTaskStartDTO startDTO) {
+        return modTasksService.startRemoteTask(taskId, startDTO);
     }
 
     /**

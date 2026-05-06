@@ -29,11 +29,6 @@ public class TaskCreateDTO {
     private String creator;
 
     /**
-     * 任务优先级：1=高，2=中，3=低；不传时默认 2
-     */
-    private Integer priority;
-
-    /**
      * 计算资源（可选）
      */
     private String computeResource;

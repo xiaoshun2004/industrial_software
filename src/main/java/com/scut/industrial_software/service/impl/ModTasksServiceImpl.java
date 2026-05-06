@@ -7,10 +7,12 @@ import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.common.exception.ApiException;
 import com.scut.industrial_software.common.api.ApiErrorCode;
 import com.scut.industrial_software.model.dto.PageRequestDTO;
+import com.scut.industrial_software.model.dto.RemoteTaskStartDTO;
 import com.scut.industrial_software.model.dto.TaskCreateDTO;
 import com.scut.industrial_software.model.entity.ModProjects;
 import com.scut.industrial_software.model.entity.ModTasks;
 import com.scut.industrial_software.model.entity.ModUsers;
+import com.scut.industrial_software.model.entity.Server;
 import com.scut.industrial_software.mapper.ModTasksMapper;
 import com.scut.industrial_software.model.vo.ModTasksVO;
 import com.scut.industrial_software.service.IModProjectsService;
@@ -18,8 +20,8 @@ import com.scut.industrial_software.service.IModTasksService;
 import com.scut.industrial_software.service.IModUsersService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.scut.industrial_software.service.IMonitorService;
+import com.scut.industrial_software.service.IMonitorServerService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -49,11 +51,8 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
     @Autowired
     private IMonitorService monitorService;
 
-    @Value("${monitor.local-server.id:1}")
-    private Integer localServerId;
-
-    @Value("${monitor.local-server.name:local-server}")
-    private String localServerName;
+    @Autowired
+    private IMonitorServerService monitorServerService;
 
     private static final List<String> STAGE_TYPES = Arrays.asList("前处理", "后处理", "求解器");
     private static final List<String> PREPROCESSING_TYPES = Arrays.asList("多体", "结构", "冲击");
@@ -146,8 +145,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         task.setSimulationStage(createDTO.getSimulationStage());
         task.setType(createDTO.getType());
         task.setStatus(STATUS_PENDING);
-        task.setExecutionMode(null);
-        task.setPriority(createDTO.getPriority() == null ? DEFAULT_PRIORITY : createDTO.getPriority());
+        task.setPriority(null);
         task.setCpuCoreNeed(DEFAULT_CPU_CORE_NEED);
         task.setMemoryNeed(DEFAULT_MEMORY_NEED);
         task.setProgress(0);
@@ -194,8 +192,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         task.setSimulationStage(createDTO.getSimulationStage());
         task.setType(createDTO.getType());
         task.setStatus(STATUS_PENDING);
-        task.setExecutionMode(null);
-        task.setPriority(createDTO.getPriority() == null ? DEFAULT_PRIORITY : createDTO.getPriority());
+        task.setPriority(null);
         task.setCpuCoreNeed(DEFAULT_CPU_CORE_NEED);
         task.setMemoryNeed(DEFAULT_MEMORY_NEED);
         task.setProgress(0);
@@ -244,10 +241,16 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
     }
 
     @Override
-    public ApiResult<?> startRemoteTask(String taskId) {
+    public ApiResult<?> startRemoteTask(String taskId, RemoteTaskStartDTO startDTO) {
         Integer taskIdInt = parseTaskId(taskId);
         if (taskIdInt == null) {
             return ApiResult.failed("任务ID格式不正确");
+        }
+        if (startDTO == null || startDTO.getServerId() == null) {
+            return ApiResult.failed("请选择远程服务器");
+        }
+        if (startDTO.getPriority() == null || startDTO.getPriority() < 1 || startDTO.getPriority() > 3) {
+            return ApiResult.failed("priority 仅支持 1|2|3");
         }
 
         ModTasks task = this.getById(taskIdInt);
@@ -255,9 +258,14 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
             throw new ApiException(ApiErrorCode.RESOURCE_NOT_FOUND);
         }
 
-        int updated = baseMapper.markTaskRemotePending(taskIdInt, localServerId, localServerName);
+        Server server = monitorServerService.getById(startDTO.getServerId());
+        if (server == null) {
+            return ApiResult.failed("服务器不存在");
+        }
+
+        int updated = baseMapper.markTaskRemotePending(taskIdInt, server.getId(), server.getName(), startDTO.getPriority());
         if (updated <= 0) {
-            return ApiResult.failed("仅 pending 且未选择其他执行模式的任务允许远程启动");
+            return ApiResult.failed("仅 pending 且未选择远程服务器的任务允许远程启动");
         }
 
         monitorService.dispatchPendingTasks();
@@ -333,10 +341,6 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         // 校验创建者用户名
         if (!StringUtils.hasText(createDTO.getCreator())) {
             return ApiResult.failed("创建者不能为空");
-        }
-
-        if (createDTO.getPriority() != null && (createDTO.getPriority() < 1 || createDTO.getPriority() > 3)) {
-            return ApiResult.failed("priority 仅支持 1|2|3");
         }
 
         // 校验用户是否存在

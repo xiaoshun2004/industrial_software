@@ -77,7 +77,8 @@ public interface ModTasksMapper extends BaseMapper<ModTasks> {
 
     int markTaskRemotePending(@Param("taskId") Integer taskId,
                               @Param("serverId") Integer serverId,
-                              @Param("serverName") String serverName);
+                              @Param("serverName") String serverName,
+                              @Param("priority") Integer priority);
 
     /**
      * 将任务从 pending 标记为 running。

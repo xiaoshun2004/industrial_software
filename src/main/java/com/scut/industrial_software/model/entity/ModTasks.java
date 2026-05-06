@@ -67,11 +67,6 @@ public class ModTasks implements Serializable {
     private String status;
 
     /**
-     * Execution mode: local=user client, remote=backend scheduler, null=not selected.
-     */
-    private String executionMode;
-
-    /**
      * 所属服务器ID
      */
     private Integer serverId;

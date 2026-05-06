@@ -2,6 +2,7 @@ package com.scut.industrial_software.service;
 
 import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.model.dto.PageRequestDTO;
+import com.scut.industrial_software.model.dto.RemoteTaskStartDTO;
 import com.scut.industrial_software.model.dto.TaskCreateDTO;
 import com.scut.industrial_software.model.entity.ModTasks;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -60,7 +61,7 @@ public interface IModTasksService extends IService<ModTasks> {
      */
     ApiResult<?> deleteTask(String taskId);
 
-    ApiResult<?> startRemoteTask(String taskId);
+    ApiResult<?> startRemoteTask(String taskId, RemoteTaskStartDTO startDTO);
 
     ApiResult<?> getTaskStatus(String taskId);
 
