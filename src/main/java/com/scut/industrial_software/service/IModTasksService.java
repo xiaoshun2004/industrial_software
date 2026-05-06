@@ -1,6 +1,7 @@
 package com.scut.industrial_software.service;
 
 import com.scut.industrial_software.common.api.ApiResult;
+import com.scut.industrial_software.model.dto.ClientTaskStatusUpdateDTO;
 import com.scut.industrial_software.model.dto.PageRequestDTO;
 import com.scut.industrial_software.model.dto.RemoteTaskStartDTO;
 import com.scut.industrial_software.model.dto.TaskCreateDTO;
@@ -62,6 +63,8 @@ public interface IModTasksService extends IService<ModTasks> {
     ApiResult<?> deleteTask(String taskId);
 
     ApiResult<?> startRemoteTask(String taskId, RemoteTaskStartDTO startDTO);
+
+    ApiResult<?> updateClientTaskStatus(String taskId, ClientTaskStatusUpdateDTO updateDTO);
 
     ApiResult<?> getTaskStatus(String taskId);
 

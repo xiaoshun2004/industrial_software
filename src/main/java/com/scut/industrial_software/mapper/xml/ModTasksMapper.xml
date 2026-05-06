@@ -180,6 +180,27 @@
           AND server_id IS NULL
     </update>
 
+    <update id="updateLocalTaskStatusConditionally">
+        UPDATE mod_tasks
+        SET status = #{toStatus},
+            progress = CASE
+                WHEN #{progress} IS NULL THEN progress
+                ELSE #{progress}
+            END,
+            start_time = CASE
+                WHEN #{toStatus} = 'running' AND start_time IS NULL THEN NOW()
+                ELSE start_time
+            END,
+            end_time = CASE
+                WHEN #{toStatus} IN ('completed', 'failed', 'stopped') THEN NOW()
+                ELSE end_time
+            END,
+            error_msg = #{errorMsg}
+        WHERE task_id = #{taskId}
+          AND status = #{fromStatus}
+          AND server_id IS NULL
+    </update>
+
     <update id="markTaskRunning">
         UPDATE mod_tasks
         SET status = 'running',

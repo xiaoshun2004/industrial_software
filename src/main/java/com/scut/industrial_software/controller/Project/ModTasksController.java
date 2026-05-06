@@ -1,6 +1,7 @@
 package com.scut.industrial_software.controller.Project;
 
 import com.scut.industrial_software.common.api.ApiResult;
+import com.scut.industrial_software.model.dto.ClientTaskStatusUpdateDTO;
 import com.scut.industrial_software.model.dto.PageRequestDTO;
 import com.scut.industrial_software.model.dto.RemoteTaskStartDTO;
 import com.scut.industrial_software.model.dto.TaskCreateDTO;
@@ -63,6 +64,15 @@ public class ModTasksController {
     public ApiResult<?> startRemoteTask(@PathVariable String taskId,
                                         @RequestBody RemoteTaskStartDTO startDTO) {
         return modTasksService.startRemoteTask(taskId, startDTO);
+    }
+
+    /**
+     * 客户端本地任务状态上报
+     */
+    @PutMapping("/client/status/{taskId}")
+    public ApiResult<?> updateClientTaskStatus(@PathVariable String taskId,
+                                               @RequestBody ClientTaskStatusUpdateDTO updateDTO) {
+        return modTasksService.updateClientTaskStatus(taskId, updateDTO);
     }
 
     /**

@@ -9,11 +9,6 @@ import lombok.Data;
 public class RemoteTaskStartDTO {
 
     /**
-     * 远程服务器 id。
-     */
-    private Integer serverId;
-
-    /**
      * 远程调度优先级：1=高，2=中，3=低。
      */
     private Integer priority;

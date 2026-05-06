@@ -6,13 +6,14 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.scut.industrial_software.common.api.ApiResult;
 import com.scut.industrial_software.common.exception.ApiException;
 import com.scut.industrial_software.common.api.ApiErrorCode;
+import com.scut.industrial_software.model.constant.TaskStatusConstants;
+import com.scut.industrial_software.model.dto.ClientTaskStatusUpdateDTO;
 import com.scut.industrial_software.model.dto.PageRequestDTO;
 import com.scut.industrial_software.model.dto.RemoteTaskStartDTO;
 import com.scut.industrial_software.model.dto.TaskCreateDTO;
 import com.scut.industrial_software.model.entity.ModProjects;
 import com.scut.industrial_software.model.entity.ModTasks;
 import com.scut.industrial_software.model.entity.ModUsers;
-import com.scut.industrial_software.model.entity.Server;
 import com.scut.industrial_software.mapper.ModTasksMapper;
 import com.scut.industrial_software.model.vo.ModTasksVO;
 import com.scut.industrial_software.service.IModProjectsService;
@@ -20,8 +21,8 @@ import com.scut.industrial_software.service.IModTasksService;
 import com.scut.industrial_software.service.IModUsersService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.scut.industrial_software.service.IMonitorService;
-import com.scut.industrial_software.service.IMonitorServerService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -51,8 +52,11 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
     @Autowired
     private IMonitorService monitorService;
 
-    @Autowired
-    private IMonitorServerService monitorServerService;
+    @Value("${monitor.local-server.id:1}")
+    private Integer localServerId;
+
+    @Value("${monitor.local-server.name:local-server}")
+    private String localServerName;
 
     private static final List<String> STAGE_TYPES = Arrays.asList("前处理", "后处理", "求解器");
     private static final List<String> PREPROCESSING_TYPES = Arrays.asList("多体", "结构", "冲击");
@@ -246,10 +250,7 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         if (taskIdInt == null) {
             return ApiResult.failed("任务ID格式不正确");
         }
-        if (startDTO == null || startDTO.getServerId() == null) {
-            return ApiResult.failed("请选择远程服务器");
-        }
-        if (startDTO.getPriority() == null || startDTO.getPriority() < 1 || startDTO.getPriority() > 3) {
+        if (startDTO == null || startDTO.getPriority() == null || startDTO.getPriority() < 1 || startDTO.getPriority() > 3) {
             return ApiResult.failed("priority 仅支持 1|2|3");
         }
 
@@ -258,18 +259,56 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
             throw new ApiException(ApiErrorCode.RESOURCE_NOT_FOUND);
         }
 
-        Server server = monitorServerService.getById(startDTO.getServerId());
-        if (server == null) {
-            return ApiResult.failed("服务器不存在");
-        }
-
-        int updated = baseMapper.markTaskRemotePending(taskIdInt, server.getId(), server.getName(), startDTO.getPriority());
+        int updated = baseMapper.markTaskRemotePending(taskIdInt, localServerId, localServerName, startDTO.getPriority());
         if (updated <= 0) {
-            return ApiResult.failed("仅 pending 且未选择远程服务器的任务允许远程启动");
+            return ApiResult.failed("仅 pending 且未进入远程调度的任务允许远程启动");
         }
 
         monitorService.dispatchPendingTasks();
         return monitorService.getProgramStatus(taskId);
+    }
+
+    @Override
+    public ApiResult<?> updateClientTaskStatus(String taskId, ClientTaskStatusUpdateDTO updateDTO) {
+        Integer taskIdInt = parseTaskId(taskId);
+        if (taskIdInt == null) {
+            return ApiResult.failed("任务ID格式不正确");
+        }
+        if (updateDTO == null || !StringUtils.hasText(updateDTO.getStatus())) {
+            return ApiResult.failed("目标状态不能为空");
+        }
+
+        String toStatus = normalizeStatus(updateDTO.getStatus());
+        if (!isClientTargetStatus(toStatus)) {
+            return ApiResult.failed("客户端仅允许上报 running、completed、failed、stopped 状态");
+        }
+        if (updateDTO.getProgress() != null && (updateDTO.getProgress() < 0 || updateDTO.getProgress() > 100)) {
+            return ApiResult.failed("progress 仅支持 0-100");
+        }
+
+        ModTasks task = this.getById(taskIdInt);
+        if (task == null) {
+            throw new ApiException(ApiErrorCode.RESOURCE_NOT_FOUND);
+        }
+        if (task.getServerId() != null) {
+            return ApiResult.failed("该任务已进入远程服务器调度，不能通过客户端接口修改状态");
+        }
+
+        String fromStatus = normalizeStatus(task.getStatus());
+        if (!isAllowedClientTransition(fromStatus, toStatus)) {
+            return ApiResult.failed("不允许从 " + fromStatus + " 变更为 " + toStatus);
+        }
+
+        Integer progress = resolveClientProgress(toStatus, updateDTO.getProgress());
+        String errorMsg = (TaskStatusConstants.FAILED.equals(toStatus) || TaskStatusConstants.STOPPED.equals(toStatus))
+                ? updateDTO.getErrorMsg()
+                : null;
+
+        int updated = baseMapper.updateLocalTaskStatusConditionally(taskIdInt, fromStatus, toStatus, progress, errorMsg);
+        if (updated <= 0) {
+            return ApiResult.failed("任务状态已变化，请刷新后重试");
+        }
+        return getTaskStatus(taskId);
     }
 
     @Override
@@ -325,6 +364,51 @@ public class ModTasksServiceImpl extends ServiceImpl<ModTasksMapper, ModTasks> i
         } catch (Exception ex) {
             return null;
         }
+    }
+
+    private String normalizeStatus(String status) {
+        if (!StringUtils.hasText(status)) {
+            return status;
+        }
+        return switch (status.trim()) {
+            case "未启动" -> TaskStatusConstants.PENDING;
+            case "仿真中" -> TaskStatusConstants.RUNNING;
+            case "已完成" -> TaskStatusConstants.COMPLETED;
+            case "已失败" -> TaskStatusConstants.FAILED;
+            case "已停止" -> TaskStatusConstants.STOPPED;
+            default -> status.trim().toLowerCase();
+        };
+    }
+
+    private boolean isClientTargetStatus(String status) {
+        return TaskStatusConstants.RUNNING.equals(status)
+                || TaskStatusConstants.COMPLETED.equals(status)
+                || TaskStatusConstants.FAILED.equals(status)
+                || TaskStatusConstants.STOPPED.equals(status);
+    }
+
+    private boolean isAllowedClientTransition(String fromStatus, String toStatus) {
+        if (TaskStatusConstants.PENDING.equals(fromStatus)) {
+            return TaskStatusConstants.RUNNING.equals(toStatus)
+                    || TaskStatusConstants.FAILED.equals(toStatus)
+                    || TaskStatusConstants.STOPPED.equals(toStatus);
+        }
+        if (TaskStatusConstants.RUNNING.equals(fromStatus)) {
+            return TaskStatusConstants.COMPLETED.equals(toStatus)
+                    || TaskStatusConstants.FAILED.equals(toStatus)
+                    || TaskStatusConstants.STOPPED.equals(toStatus);
+        }
+        return false;
+    }
+
+    private Integer resolveClientProgress(String toStatus, Integer requestedProgress) {
+        if (TaskStatusConstants.COMPLETED.equals(toStatus)) {
+            return 100;
+        }
+        if (TaskStatusConstants.RUNNING.equals(toStatus)) {
+            return requestedProgress == null ? 0 : requestedProgress;
+        }
+        return requestedProgress;
     }
 
     /**

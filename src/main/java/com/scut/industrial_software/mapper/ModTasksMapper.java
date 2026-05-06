@@ -81,6 +81,15 @@ public interface ModTasksMapper extends BaseMapper<ModTasks> {
                               @Param("priority") Integer priority);
 
     /**
+     * 客户端本地任务状态条件更新。
+     */
+    int updateLocalTaskStatusConditionally(@Param("taskId") Integer taskId,
+                                           @Param("fromStatus") String fromStatus,
+                                           @Param("toStatus") String toStatus,
+                                           @Param("progress") Integer progress,
+                                           @Param("errorMsg") String errorMsg);
+
+    /**
      * 将任务从 pending 标记为 running。
      */
     int markTaskRunning(@Param("taskId") Integer taskId,
